@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nur für die App-Aktualisierung (Updater.kt): der Ordner, in den die neue APK heruntergeladen wird -->
+<paths>
+    <cache-path name="updates" path="updates/" />
+</paths>
