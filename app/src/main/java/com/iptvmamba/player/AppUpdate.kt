@@ -31,7 +31,7 @@ data class UpdateInfo(val code: Long, val name: String, val apkUrl: String, val 
  */
 object AppUpdate {
     /** Built-in update address: the latest release of the project on GitHub. */
-    const val DEFAULT_URL = "https://api.github.com/repos/Emrodev/iptvmamba-Stream/releases/latest"
+    const val DEFAULT_URL = "https://api.github.com/repos/baskettv23/iptvmamba/releases/latest"
 
     /** Found update (for the bell), null = none known. */
     var available by mutableStateOf<UpdateInfo?>(null)
