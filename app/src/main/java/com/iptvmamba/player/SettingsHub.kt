@@ -55,7 +55,7 @@ private val CATS = listOf(
     Cat(AIcon.Live, "Live-TV & Guide", "TV-Programm, Senderlisten, Erinnerungen"),
     Cat(AIcon.Download, "Playlists", "Verwalten, Sprachen, Aktualisieren"),
     Cat(AIcon.Person, "Profile", "Verlauf, Favoriten, Jugendschutz je Person"),
-    Cat(AIcon.Star, "API-Schlüssel", "TMDB, IMDb und Rotten Tomatoes"),
+    Cat(AIcon.Star, "API-Schlüssel", "TMDB, IMDb, Real-Debrid (Torrents)"),
     Cat(AIcon.Lock, "Jugendschutz", "PIN, Inhalte ab 18"),
     Cat(AIcon.Storage, "Speicher", "Cache, Verlauf, Fortsetzen"),
     Cat(AIcon.Pulse, "Diagnose", "Status und Fehlersuche"),
@@ -1264,6 +1264,11 @@ private fun ApiKeysPage(ctx: Context) {
     var busy by remember { mutableStateOf(false) }
     Hint("Die App enthält keine eigenen Schlüssel. Mit deinen eigenen, kostenlosen Schlüsseln zeigt sie Poster, Beschreibungen, Besetzung, Trailer, automatische Genres sowie IMDb- und Rotten-Tomatoes-Wertungen. Ohne Schlüssel übernimmt sie Beschreibung, Cover und Bewertung von deinem Anbieter (bei Xtream-Zugängen).")
 
+    SectionTitle("Real-Debrid (Torrent-Streams)")
+    Field(rd, { rd = it; rdStatus = "" }, "Real-Debrid API-Token")
+    Hint("Optional, für die Schaltfläche „Streams“ auf der Film-/Serienseite: Torrentio liefert Treffer, Real-Debrid wandelt sie in direkte Links um. Token erstellen unter real-debrid.com/apitoken (kostenpflichtiges Konto nötig).")
+    if (rdStatus.isNotBlank()) Text(rdStatus, color = if (rdStatus == "Token gültig") Accent2 else Muted, fontSize = 16.sp)
+
     SectionTitle("TMDB (Film-Infos)")
     Field(tmdb, { tmdb = it; tmdbStatus = "" }, "TMDB API-Schlüssel (v3)")
     Hint("Kostenlos unter themoviedb.org: Konto anlegen, anmelden, dann Einstellungen > API > API-Schlüssel anfordern und den 32-stelligen „API Key“ eintragen. Dieses Produkt verwendet die TMDB-API, wird aber nicht von TMDB unterstützt oder zertifiziert.")
@@ -1273,11 +1278,6 @@ private fun ApiKeysPage(ctx: Context) {
     Field(omdb, { omdb = it; omdbStatus = "" }, "OMDb API-Schlüssel")
     Hint("Kostenlos unter omdbapi.com > API Key (FREE). Danach den Aktivierungslink in der E-Mail anklicken, sonst funktioniert der Schlüssel nicht. Geht auch ohne TMDB-Schlüssel.")
     if (omdbStatus.isNotBlank()) Text(omdbStatus, color = if (omdbStatus == "Schlüssel gültig") Accent2 else Muted, fontSize = 16.sp)
-
-    SectionTitle("Real-Debrid (Torrent-Streams)")
-    Field(rd, { rd = it; rdStatus = "" }, "Real-Debrid API-Token")
-    Hint("Optional, für die Schaltfläche „Streams“ auf der Film-/Serienseite: Torrentio liefert Treffer, Real-Debrid wandelt sie in direkte Links um. Token erstellen unter real-debrid.com/apitoken (kostenpflichtiges Konto nötig).")
-    if (rdStatus.isNotBlank()) Text(rdStatus, color = if (rdStatus == "Token gültig") Accent2 else Muted, fontSize = 16.sp)
 
     Hint("Die Schlüssel bleiben nur auf diesem Gerät. Nach dem Eintragen die App einmal neu starten, damit alle Bereiche die Infos laden. Intro- und Abspann-Zeiten kommen von TheIntroDB und brauchen keinen Schlüssel.")
     // Buttons last: text below the last focusable element was cut off at the bottom of the page

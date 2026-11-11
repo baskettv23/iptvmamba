@@ -30,6 +30,7 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import org.json.JSONObject
 import java.net.URLEncoder
+import kotlin.math.abs
 
 /** One torrent result from Torrentio, optionally already resolved to a direct Real-Debrid link. */
 data class StreamLink(
@@ -105,10 +106,19 @@ object RealDebrid {
         return b
     }
 
-    private fun select(id: String, key: String) {
-        Net.base.newCall(req("/torrents/selectFiles/$id", key, FormBody.Builder().add("files", "all").build()).build())
+    private fun info(id: String, key: String): JSONObject =
+        Net.base.newCall(req("/torrents/info/$id", key).build()).execute().use {
+            if (!it.isSuccessful) throw java.io.IOException("info HTTP ${it.code}")
+            JSONObject(it.body?.string().orEmpty())
+        }
+
+    private fun select(id: String, key: String, files: String) {
+        Net.base.newCall(req("/torrents/selectFiles/$id", key, FormBody.Builder().add("files", files).build()).build())
             .execute().close()
     }
+
+    private fun failed(status: String) =
+        status == "error" || status == "magnet_error" || status == "virus" || status == "dead"
 
     suspend fun check(key: String): String? = withContext(Dispatchers.IO) {
         try {
@@ -128,27 +138,78 @@ object RealDebrid {
                 JSONObject(it.body?.string().orEmpty()).optString("id", "")
             }
         if (id.isBlank()) throw java.io.IOException("Keine Torrent-ID")
-        select(id, key)
-        var links: List<String> = emptyList()
+
+        // Select only the wanted file (episode) instead of a whole season pack, when the list is known.
+        var fileId = -1
         var status = ""
-        for (n in 0 until 90) {
-            val info = Net.base.newCall(req("/torrents/info/$id", key).build()).execute().use {
-                if (!it.isSuccessful) throw java.io.IOException("info HTTP ${it.code}")
-                JSONObject(it.body?.string().orEmpty())
+        for (n in 0 until 30) {
+            val o = info(id, key)
+            status = o.optString("status", "")
+            if (failed(status)) throw java.io.IOException("Torrent-Fehler: $status")
+            val files = o.optJSONArray("files")
+            if (files != null && files.length() > 0) {
+                val idx = fileIdx.coerceIn(0, files.length() - 1)
+                fileId = files.optJSONObject(idx)?.optInt("id", -1) ?: -1
+                break
             }
-            status = info.optString("status", "")
-            info.optJSONArray("links")?.let { a -> links = (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() } }
+            delay(1000)
+        }
+        val wanted = if (fileId > 0) fileId.toString() else "all"
+        select(id, key, wanted)
+
+        var links: List<String> = emptyList()
+        for (n in 0 until 90) {
+            val o = info(id, key)
+            status = o.optString("status", "")
+            o.optJSONArray("links")?.let { a -> links = (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() } }
             if (status == "downloaded" && links.isNotEmpty()) break
-            if (status == "error" || status == "magnet_error" || status == "virus" || status == "dead") throw java.io.IOException("Torrent-Fehler: $status")
-            if (status == "waiting_files_selection") select(id, key)
+            if (failed(status)) throw java.io.IOException("Torrent-Fehler: $status")
+            if (status == "waiting_files_selection") select(id, key, wanted)
             delay(2000)
         }
         if (links.isEmpty()) throw java.io.IOException("Torrent nicht bereit ($status)")
-        val link = links[fileIdx.coerceIn(0, links.lastIndex)]
+        val link = links.getOrElse(fileIdx.coerceIn(0, links.lastIndex)) { links.first() }
         Net.base.newCall(req("/unrestrict/link", key, FormBody.Builder().add("link", link).build()).build()).execute().use {
             if (!it.isSuccessful) throw java.io.IOException("unrestrict HTTP ${it.code}")
             JSONObject(it.body?.string().orEmpty()).optString("download", "")
         }.ifBlank { throw java.io.IOException("Kein Download-Link") }
+    }
+}
+
+/** Resolves a title to an IMDb id via Cinemeta (Stremio), so Torrentio also works without a TMDB key. */
+object ImdbLookup {
+    suspend fun resolve(title: String, year: Int?, isTv: Boolean): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val type = if (isTv) "series" else "movie"
+            val q = URLEncoder.encode(title.trim(), "UTF-8")
+            val req = Request.Builder()
+                .url("https://v3-cinemeta.strem.io/catalog/$type/top/search=$q.json")
+                .header("User-Agent", "iptvmamba")
+                .build()
+            val body = Net.base.newCall(req).execute().use { r ->
+                if (!r.isSuccessful) return@runCatching null
+                r.body?.string().orEmpty()
+            }
+            val arr = JSONObject(body).optJSONArray("metas") ?: return@runCatching null
+            var best: String? = null
+            var bestScore = -1
+            val want = title.trim()
+            for (i in 0 until arr.length()) {
+                val o = arr.optJSONObject(i) ?: continue
+                val id = o.optString("imdb_id", "")
+                if (id.isBlank()) continue
+                val name = o.optString("name", "")
+                val y = Regex("\\d{4}").find(o.optString("releaseInfo", ""))?.value?.toIntOrNull()
+                var score = 0
+                if (name.equals(want, ignoreCase = true)) score += 4
+                else if (name.contains(want, ignoreCase = true) || want.contains(name, ignoreCase = true)) score += 2
+                if (year != null && y != null) {
+                    if (year == y) score += 3 else if (abs(year - y) <= 1) score += 1
+                }
+                if (score > bestScore) { bestScore = score; best = id }
+            }
+            best
+        }.getOrNull()
     }
 }
 
@@ -171,9 +232,15 @@ fun StreamPicker(req: TorrentReq, onClose: () -> Unit, onPlay: (String) -> Unit)
         if (key.isBlank()) {
             error = "Real-Debrid-Schlüssel fehlt. Einstellungen → API-Schlüssel."
         } else {
-            runCatching { Torrentio.streams(req.imdbId, req.season, req.episode, key) }
-                .onSuccess { list = it; if (it.isEmpty()) error = "Keine Streams gefunden." }
-                .onFailure { error = "Torrentio nicht erreichbar: " + (it.message ?: it.javaClass.simpleName) }
+            val id = if (req.imdbId.isNotBlank()) req.imdbId
+                     else ImdbLookup.resolve(req.item.title, req.item.year, req.item.kind == Kind.SERIES)
+            if (id == null) {
+                error = "Kein IMDb-Treffer für „${req.item.title}“. Tipp: TMDB-Schlüssel unter Einstellungen → API-Schlüssel eintragen."
+            } else {
+                runCatching { Torrentio.streams(id, req.season, req.episode, key) }
+                    .onSuccess { list = it; if (it.isEmpty()) error = "Keine Streams gefunden." }
+                    .onFailure { error = "Torrentio nicht erreichbar: " + (it.message ?: it.javaClass.simpleName) }
+            }
         }
         loading = false
     }

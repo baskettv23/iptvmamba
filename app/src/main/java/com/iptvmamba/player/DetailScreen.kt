@@ -509,6 +509,13 @@ private fun DetailScreenFull(
                                         playUrl?.let { onPlay(it, item.title + (if (item.kind == Kind.SERIES) " S" + season + "E" + (eps.firstOrNull()?.num ?: 1) else ""), 0L) }
                                     }
                                 }
+                                onStreams?.let { cb ->
+                                    HeroButton("Streams", AIcon.Download, false, Modifier, bh) {
+                                        val s = if (item.kind == Kind.SERIES) season.coerceAtLeast(1) else 0
+                                        val e = if (item.kind == Kind.SERIES) (eps.firstOrNull()?.num ?: 1).coerceAtLeast(1) else 0
+                                        cb(imdbId ?: "", s, e)
+                                    }
+                                }
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
                                 val inList = Library.isWatch(item.id)
@@ -518,15 +525,6 @@ private fun DetailScreenFull(
                                 HeroButton(if (fav) "Favorit" else "Zu Favoriten", if (fav) AIcon.HeartFilled else AIcon.Heart, false, Modifier, bh) { Library.toggleFav(ctx, item.id) }
                                 HeroButton("Trailer", AIcon.Play, false, Modifier, bh) { openTrailer(ctx, meta?.trailerKey, item.title) }
                                 HeroButton("Extern", AIcon.External, false, Modifier, bh) { playUrl?.let { openExternal(ctx, it, item.title) } }
-                                onStreams?.let { cb ->
-                                    imdbId?.let { id ->
-                                        HeroButton("Streams", AIcon.Download, false, Modifier, bh) {
-                                            val s = if (item.kind == Kind.SERIES) season.coerceAtLeast(1) else 0
-                                            val e = if (item.kind == Kind.SERIES) (eps.firstOrNull()?.num ?: 1).coerceAtLeast(1) else 0
-                                            cb(id, s, e)
-                                        }
-                                    }
-                                }
                             }
                             // Watched by hand: movie, season, whole series (also reachable per episode: long OK / menu key on the row)
                             Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {

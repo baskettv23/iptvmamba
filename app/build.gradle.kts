@@ -36,8 +36,8 @@ android {
         minSdk = 24
         targetSdk = 37
         // Raise both for every release; the GitHub release tag must match versionName (e.g. tag "v1.1").
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
         // Name unter dem Symbol; der Debug-Build überschreibt ihn (siehe buildTypes)
         manifestPlaceholders["appLabel"] = "iptvmamba"
 
