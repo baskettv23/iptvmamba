@@ -195,6 +195,7 @@ private fun AppContent() {
     var browse by remember { mutableStateOf<BrowseState?>(null) }
     var cats by remember { mutableStateOf<CatReq?>(null) }
     var playing by remember { mutableStateOf<PlayReq?>(null) }
+    var torrentReq by remember { mutableStateOf<TorrentReq?>(null) }
     var tab by remember { mutableStateOf(SettingsLogic.resolveStartTab(General.startTab, AppSettings.menuOrder.toList(), AppSettings.menuHidden.toList())) }
     val gridState = remember(browse) { LazyGridState() }
     val states = listOf(
@@ -245,7 +246,7 @@ private fun AppContent() {
     // Genre detection in the background; restarts cleanly with every new list (reload, language filter, parental control)
     LaunchedEffect(all) { kotlinx.coroutines.delay(8_000); Classifier.restart(ctx, all) }   // after the first screen is up, and debounced while the list is still changing
 
-    fun start(item: Item, title: String, url: String, startMs: Long = 0L) {
+    fun start(item: Item, title: String, url: String, startMs: Long = 0L, direct: Boolean = false) {
         History.add(ctx, item.id)
         val sm = SE_RE.find(title)
         val season = sm?.groupValues?.get(1)?.toIntOrNull() ?: 0
@@ -254,7 +255,7 @@ private fun AppContent() {
         var playUrl = url
         var alts = emptyList<Variant>()
         var note: String? = null
-        if (item.kind == Kind.MOVIE && !item.id.startsWith("rec:")) {
+        if (!direct && item.kind == Kind.MOVIE && !item.id.startsWith("rec:")) {
             // Same movie in other qualities (own entries of the provider): choose to suit the device, the rest as fallbacks
             val list = Sources.alternatives(item, all)
             if (list.size > 1) {
@@ -426,7 +427,8 @@ private fun AppContent() {
             d != null -> key(d.id) { Box(Modifier.fillMaxSize().screenEnter()) {
                 DetailScreen(
                     d, all, onPlay = { url, t, pos -> start(d, t, url, pos) },
-                    onPerson = { pushTop(it) }, onOpenItem = { pushTop(it) }, onBack = { popTop() }
+                    onPerson = { pushTop(it) }, onOpenItem = { pushTop(it) }, onBack = { popTop() },
+                    onStreams = { imdb, s, e -> torrentReq = TorrentReq(d, imdb, d.title, s, e) }
                 )
             } }
             b != null -> Box(Modifier.fillMaxSize().screenEnter()) { BrowseScreen(
@@ -500,6 +502,13 @@ private fun AppContent() {
                 val ch = liveAll.firstOrNull { it.id == r.chId }
                 if (ch != null) { top = null; browse = null; cats = null; start(ch, ch.title, ch.url) }
             }
+        }
+        torrentReq?.let { req ->
+            StreamPicker(req, onClose = { torrentReq = null }, onPlay = { url ->
+                torrentReq = null
+                val t = if (req.season > 0 && req.episode > 0) "${req.title} S${req.season}E${req.episode}" else req.title
+                start(req.item, t, url, 0L, direct = true)
+            })
         }
     }
 }

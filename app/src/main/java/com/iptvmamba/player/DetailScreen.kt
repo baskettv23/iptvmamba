@@ -84,7 +84,7 @@ fun DetailScreen(
     item: Item, all: List<Item>, onPlay: (String, String, Long) -> Unit,
     onPerson: (PersonRef) -> Unit, onOpenItem: (Item) -> Unit, onBack: () -> Unit,
     embedded: Boolean = false, autoFocus: Boolean = true, onTopUp: (() -> Unit)? = null,
-    showActions: Boolean = true
+    showActions: Boolean = true, onStreams: ((String, Int, Int) -> Unit)? = null
 ) {
     val ctx = LocalContext.current
     var tryNo by remember(item.id) { mutableIntStateOf(0) }
@@ -118,7 +118,7 @@ fun DetailScreen(
     }
     DetailScreenFull(
         if (need) full ?: item else item, all, onPlay, onPerson, onOpenItem, onBack,
-        embedded, autoFocus, onTopUp, showActions
+        embedded, autoFocus, onTopUp, showActions, onStreams
     )
 }
 
@@ -130,7 +130,7 @@ private fun DetailScreenFull(
     // Cinema view: embedded below the title row (no own back button, no automatic focus, Up at the header passes on)
     embedded: Boolean = false, autoFocus: Boolean = true, onTopUp: (() -> Unit)? = null,
     // false = info only (cinema preview): no buttons, no season bar
-    showActions: Boolean = true
+    showActions: Boolean = true, onStreams: ((String, Int, Int) -> Unit)? = null
 ) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -518,6 +518,15 @@ private fun DetailScreenFull(
                                 HeroButton(if (fav) "Favorit" else "Zu Favoriten", if (fav) AIcon.HeartFilled else AIcon.Heart, false, Modifier, bh) { Library.toggleFav(ctx, item.id) }
                                 HeroButton("Trailer", AIcon.Play, false, Modifier, bh) { openTrailer(ctx, meta?.trailerKey, item.title) }
                                 HeroButton("Extern", AIcon.External, false, Modifier, bh) { playUrl?.let { openExternal(ctx, it, item.title) } }
+                                onStreams?.let { cb ->
+                                    imdbId?.let { id ->
+                                        HeroButton("Streams", AIcon.Download, false, Modifier, bh) {
+                                            val s = if (item.kind == Kind.SERIES) season.coerceAtLeast(1) else 0
+                                            val e = if (item.kind == Kind.SERIES) (eps.firstOrNull()?.num ?: 1).coerceAtLeast(1) else 0
+                                            cb(id, s, e)
+                                        }
+                                    }
+                                }
                             }
                             // Watched by hand: movie, season, whole series (also reachable per episode: long OK / menu key on the row)
                             Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {

@@ -1257,8 +1257,10 @@ private fun ApiKeysPage(ctx: Context) {
     val scope = rememberCoroutineScope()
     var tmdb by remember { mutableStateOf(Config.ownTmdb(ctx)) }
     var omdb by remember { mutableStateOf(Config.ownOmdb(ctx)) }
+    var rd by remember { mutableStateOf(Config.ownRd(ctx)) }
     var tmdbStatus by remember { mutableStateOf("") }
     var omdbStatus by remember { mutableStateOf("") }
+    var rdStatus by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     Hint("Die App enthält keine eigenen Schlüssel. Mit deinen eigenen, kostenlosen Schlüsseln zeigt sie Poster, Beschreibungen, Besetzung, Trailer, automatische Genres sowie IMDb- und Rotten-Tomatoes-Wertungen. Ohne Schlüssel übernimmt sie Beschreibung, Cover und Bewertung von deinem Anbieter (bei Xtream-Zugängen).")
 
@@ -1272,6 +1274,11 @@ private fun ApiKeysPage(ctx: Context) {
     Hint("Kostenlos unter omdbapi.com > API Key (FREE). Danach den Aktivierungslink in der E-Mail anklicken, sonst funktioniert der Schlüssel nicht. Geht auch ohne TMDB-Schlüssel.")
     if (omdbStatus.isNotBlank()) Text(omdbStatus, color = if (omdbStatus == "Schlüssel gültig") Accent2 else Muted, fontSize = 16.sp)
 
+    SectionTitle("Real-Debrid (Torrent-Streams)")
+    Field(rd, { rd = it; rdStatus = "" }, "Real-Debrid API-Token")
+    Hint("Optional, für die Schaltfläche „Streams“ auf der Film-/Serienseite: Torrentio liefert Treffer, Real-Debrid wandelt sie in direkte Links um. Token erstellen unter real-debrid.com/apitoken (kostenpflichtiges Konto nötig).")
+    if (rdStatus.isNotBlank()) Text(rdStatus, color = if (rdStatus == "Token gültig") Accent2 else Muted, fontSize = 16.sp)
+
     Hint("Die Schlüssel bleiben nur auf diesem Gerät. Nach dem Eintragen die App einmal neu starten, damit alle Bereiche die Infos laden. Intro- und Abspann-Zeiten kommen von TheIntroDB und brauchen keinen Schlüssel.")
     // Buttons last: text below the last focusable element was cut off at the bottom of the page
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1279,15 +1286,18 @@ private fun ApiKeysPage(ctx: Context) {
             if (busy) return@PillButton
             busy = true
             Config.save(ctx, tmdb, omdb)
-            tmdb = Config.ownTmdb(ctx); omdb = Config.ownOmdb(ctx)
+            Config.saveRd(ctx, rd)
+            tmdb = Config.ownTmdb(ctx); omdb = Config.ownOmdb(ctx); rd = Config.ownRd(ctx)
             scope.launch {
                 tmdbStatus = if (tmdb.isEmpty()) "" else KeyCheck.tmdb(tmdb) ?: "Schlüssel gültig"
                 omdbStatus = if (omdb.isEmpty()) "" else KeyCheck.omdb(omdb) ?: "Schlüssel gültig"
+                rdStatus = if (rd.isEmpty()) "" else RealDebrid.check(rd) ?: "Token gültig"
                 busy = false
             }
         }
-        if (tmdb.isNotEmpty() || omdb.isNotEmpty()) ConfirmPill("Schlüssel entfernen") {
-            tmdb = ""; omdb = ""; tmdbStatus = ""; omdbStatus = ""; Config.save(ctx, "", "")
+        if (tmdb.isNotEmpty() || omdb.isNotEmpty() || rd.isNotEmpty()) ConfirmPill("Schlüssel entfernen") {
+            tmdb = ""; omdb = ""; rd = ""; tmdbStatus = ""; omdbStatus = ""; rdStatus = ""
+            Config.save(ctx, "", ""); Config.saveRd(ctx, "")
         }
     }
 }

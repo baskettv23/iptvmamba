@@ -20,10 +20,15 @@ object Config {
         private set
     @Volatile var OMDB_KEY: String = clean(BuildConfig.OMDB_KEY)
         private set
+    /** Real-Debrid API token (for torrent streams via Torrentio). Optional. */
+    @Volatile var RD_KEY: String = ""
+        private set
     /** true if the key was entered in the app (not from secrets.properties). */
     var tmdbOwn by androidx.compose.runtime.mutableStateOf(false)
         private set
     var omdbOwn by androidx.compose.runtime.mutableStateOf(false)
+        private set
+    var rdOwn by androidx.compose.runtime.mutableStateOf(false)
         private set
     private var inited = false
 
@@ -32,6 +37,9 @@ object Config {
     /** Letters and digits only (a key must never smuggle special characters into addresses). */
     fun clean(s: String): String = s.trim().filter { it.isLetterOrDigit() }.take(64)
 
+    /** Real-Debrid tokens may also contain "-" and "_" (both URL-safe). */
+    fun cleanToken(s: String): String = s.trim().filter { it.isLetterOrDigit() || it == '-' || it == '_' }.take(128)
+
     @Synchronized
     fun init(c: Context) {
         if (inited) return
@@ -39,8 +47,10 @@ object Config {
         val p = prefs(c)
         val t = clean(p.getString("tmdb", "").orEmpty())
         val o = clean(p.getString("omdb", "").orEmpty())
+        val r = cleanToken(p.getString("rd", "").orEmpty())
         if (t.isNotEmpty()) { TMDB_KEY = t; tmdbOwn = true }
         if (o.isNotEmpty()) { OMDB_KEY = o; omdbOwn = true }
+        if (r.isNotEmpty()) { RD_KEY = r; rdOwn = true }
     }
 
     /** Stores the entered keys; empty = remove key (then secrets.properties applies again if present). */
@@ -55,6 +65,15 @@ object Config {
     /** Entered key (for the input field); keys from secrets.properties are not shown. */
     fun ownTmdb(c: Context): String = clean(prefs(c).getString("tmdb", "").orEmpty())
     fun ownOmdb(c: Context): String = clean(prefs(c).getString("omdb", "").orEmpty())
+    fun ownRd(c: Context): String = cleanToken(prefs(c).getString("rd", "").orEmpty())
+
+    /** Stores/removes the Real-Debrid token. */
+    fun saveRd(c: Context, rd: String) {
+        val r = cleanToken(rd)
+        prefs(c).edit().putString("rd", r).apply()
+        RD_KEY = r; rdOwn = r.isNotEmpty()
+        inited = true
+    }
 }
 
 /** Checks a key with a small request to the service. */
