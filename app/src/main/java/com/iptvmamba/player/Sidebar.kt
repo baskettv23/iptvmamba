@@ -141,6 +141,12 @@ fun MenuIcon(id: Int, color: Color, modifier: Modifier = Modifier) {
 private val SidebarBg: Color get() = lerp(Look.bg, Color.Black, 0.25f)
 private val SidebarInk = Color(0xFFCFCFD6)
 
+/** One vivid hue per menu entry, so the sidebar is a row of different colors. */
+private fun menuTint(id: Int): Color {
+    val hue = (id * 360f / MenuLogic.COUNT + 18f) % 360f
+    return Color.hsv(hue, 0.58f, 1f)
+}
+
 /** Position and style of the sidebar (round 20): left, right or top; icons only or always with text. */
 object SidebarPrefs {
     const val LEFT = 0
@@ -309,13 +315,14 @@ private fun SideItem(id: Int, label: String, active: Boolean, expanded: Boolean,
     var fRaw by remember { mutableStateOf(false) }
     val f = fRaw && !ViewLive.active
     val shape = RoundedCornerShape(dpx(12))
-    // Active: icon in the design color on a tinted surface. Focus: white surface, dark text (clearly "selected").
-    val ink = if (f) DS.FocusInk else if (active) Accent1 else SidebarInk
+    // Active: own color per menu entry. Focus: white surface, dark text (clearly "selected").
+    val tint = menuTint(id)
+    val ink = if (f) DS.FocusInk else tint
     Row(
         (if (horizontal) modifier.height(dpx(48)) else modifier.fillMaxWidth().height(dpx(56))).clip(shape)
             .background(
                 if (f) SolidColor(DS.FocusFill)
-                else if (active) SolidColor(Accent1.copy(alpha = .16f))
+                else if (active) SolidColor(tint.copy(alpha = .20f))
                 else SolidColor(Color.Transparent)
             )
             .onFocusChanged { fRaw = it.isFocused }
@@ -326,7 +333,7 @@ private fun SideItem(id: Int, label: String, active: Boolean, expanded: Boolean,
         MenuIcon(id, ink, Modifier.size(dpx(26)))
         if (expanded) {
             Spacer(Modifier.width(dpx(18)))
-            Text(label, color = if (f) DS.FocusInk else Color.White, fontSize = spx(19),
+            Text(label, color = if (f) DS.FocusInk else if (active) tint else Color.White, fontSize = spx(19),
                 fontWeight = if (active || f) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
         }
     }

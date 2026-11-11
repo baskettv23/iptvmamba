@@ -34,14 +34,22 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 
+/** Stable vivid hue per pill label, so every filter button in the movie area has its own color. */
+private fun pillColor(seed: String): Color {
+    var h = 17
+    for (ch in seed) h = (h * 31 + ch.code) and 0x7fffffff
+    return Color.hsv((h % 360).toFloat(), 0.52f, 1f)
+}
+
 @Composable
-fun FilterPill(text: String, active: Boolean, modifier: Modifier = Modifier, icon: FIcon? = null, caret: Boolean = false, aicon: AIcon? = null, raw: Boolean = false, onClick: () -> Unit) {
+fun FilterPill(text: String, active: Boolean, modifier: Modifier = Modifier, icon: FIcon? = null, caret: Boolean = false, aicon: AIcon? = null, raw: Boolean = false, tint: Color? = null, onClick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
     val s by animateFloatAsState(if (f) focusScale(1.06f) else 1f, label = "fp")
     val shape = RoundedCornerShape(50)
-    // Consistent with the buttons of the detail page (round 15): slightly transparent with a fine border, selection filled light
+    val t = tint ?: pillColor(text)
+    // Consistent with the buttons of the detail page (round 15): slightly transparent with a fine border, selection filled in the pill's own color
     val c = ButtonColors(
-        if (f) DS.FocusFill else if (active) Color(0x4DFFFFFF) else Color(0x33FFFFFF),
+        if (f) DS.FocusFill else if (active) t.copy(alpha = 0.22f) else Color(0x33FFFFFF),
         if (f) DS.FocusInk else Color.White
     )
     Box(
@@ -49,17 +57,17 @@ fun FilterPill(text: String, active: Boolean, modifier: Modifier = Modifier, ico
             .height(dpx(42))
             .clip(shape)
             .background(c.bg)
-            .border(1.dp, if (f) DS.FocusFill else if (active) Color(0xB3FFFFFF) else Color(0x40FFFFFF), shape)
+            .border(1.dp, if (f) DS.FocusFill else if (active) t.copy(alpha = 0.8f) else Color(0x40FFFFFF), shape)
             .onFocusChanged { f = it.isFocused }
             .clickable(onClick = onClick)
             .padding(horizontal = dpx(18)),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (icon != null) FilterIcon(icon, c.text, 20.dp)
-            if (aicon != null) AppIcon(aicon, c.text, size = 17.dp)
+            if (icon != null) FilterIcon(icon, if (f) DS.FocusInk else t, 20.dp)
+            if (aicon != null) AppIcon(aicon, if (f) DS.FocusInk else t, size = 17.dp)
             if (text.isNotEmpty()) Text(text, color = c.text, fontSize = spx(14.3f), fontWeight = FontWeight.SemiBold, maxLines = 1, raw = raw)
-            if (caret) AppIcon(AIcon.Caret, c.text, size = 16.dp)
+            if (caret) AppIcon(AIcon.Caret, if (f) DS.FocusInk else t, size = 16.dp)
         }
     }
 }
@@ -82,7 +90,7 @@ fun DropdownPill(
     var open by remember { mutableStateOf(false) }
     Box {
         // With icon: only icon + value (the setting's name is in the opened menu or recognizable from the icon)
-        FilterPill(if (icon != null) value else "$label: $value", active, modifier, icon, caret = true) { open = true }
+        FilterPill(if (icon != null) value else "$label: $value", active, modifier, icon, caret = true, tint = pillColor(label)) { open = true }
         if (open) OptionPopup(options, selected, { open = false }) { onPick(it); open = false }
     }
 }
