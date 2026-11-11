@@ -62,9 +62,7 @@ private val CATS = listOf(
     Cat(AIcon.Download, "Listen importieren", "Letterboxd, MyAnimeList, Trakt"),
     Cat(AIcon.Live, "Boomer Mode", "Ganz einfach: große Kacheln zum Auswählen"),
     Cat(AIcon.Sliders, "Startseite anpassen", "Reihen und Widgets wählen und ordnen"),
-    Cat(AIcon.Info, "Über iptvmamba", "Version, Quellen, Zurücksetzen"),
-    // Donate is always the very last entry
-    Cat(AIcon.HeartFilled, "Spende", "Unterstütze iptvmamba")
+    Cat(AIcon.Info, "Über iptvmamba", "Version, Quellen, Zurücksetzen")
 )
 
 /** Open a settings page directly (e.g. profile circle at the top with only one profile: page "Profiles"). */
@@ -146,7 +144,6 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                 16 -> BoomerPage(ctx) { page = -1 }
                 17 -> HomeLayoutPage(ctx)
                 15 -> ListImportPage(ctx)
-                19 -> DonateSection(ctx)
                 else -> AboutPage(ctx)   // 18
             }
             // Every setting page ends with a way back to the defaults
@@ -1297,6 +1294,7 @@ private fun ApiKeysPage(ctx: Context) {
 @Composable
 private fun AboutPage(ctx: Context) {
     Text("iptvmamba · Version " + appVersion(ctx), color = Color.White, fontSize = 18.sp)
+    Hint("Projektseite: github.com/baskettv23/iptvmamba")
     Hint("iptvmamba ist ein Player und liefert selbst keine Inhalte. Nutze nur Quellen, für die du eine Berechtigung hast.")
     Hint("Dieses Produkt verwendet die TMDB-API, wird aber nicht von TMDB unterstützt oder zertifiziert. Wertungen: OMDb. Intro-Zeiten: TheIntroDB.")
     Hint("iptvmamba ist freie Software unter der GNU General Public License v3 (GPL-3.0). Verwendete Bibliotheken: AndroidX/Jetpack Compose, Media3 (Apache 2.0), OkHttp, Coil (Apache 2.0), Jellyfin FFmpeg-Decoder (GPL-3.0), Schriften Outfit und Inter (SIL Open Font License).")
