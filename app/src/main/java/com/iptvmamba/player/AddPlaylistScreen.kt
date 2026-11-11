@@ -71,6 +71,9 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
         }
     }
     var serving by remember { mutableStateOf(false) }
+    val localNet = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { ok -> if (ok) serving = receiver.start() }
     DisposableEffect(Unit) {
         // Runde 20: Playlist-Datei vom Handy hochladen, Absturzbericht am Handy lesen
         receiver.uploadDir = ImportFiles.tmpDir(ctx)
@@ -91,7 +94,7 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
         receiver.onList = { name, bytes ->
             Handler(Looper.getMainLooper()).post { ListImportApply.run(ctx, name, bytes) }
         }
-        serving = receiver.start()
+        serving = LocalNet.granted(ctx) && receiver.start()
         onDispose { receiver.stop() }
     }
     val canCancel = PlaylistStore.lists.isNotEmpty() || PlaylistStore.channels.isNotEmpty()
@@ -234,7 +237,13 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
             }
         }
         // Right: instructions for input on the phone
-        if (!compact) PhoneCard(Modifier.weight(1f), if (serving && ip != null) "http://" + ip + ":" + receiver.port else null, receiver.code)
+        if (!compact) PhoneCard(
+            Modifier.weight(1f),
+            if (serving && ip != null) "http://" + ip + ":" + receiver.port else null,
+            receiver.code,
+            needsPermission = !LocalNet.granted(ctx),
+            onRequestPermission = { LocalNet.markAsked(ctx); runCatching { localNet.launch(LocalNet.PERM) } }
+        )
     }
     }
 }
@@ -258,7 +267,7 @@ val InstantSpec = object : androidx.compose.foundation.gestures.BringIntoViewSpe
 
 /** Card with instructions: enter the playlist conveniently on the phone instead of with the remote. */
 @Composable
-private fun PhoneCard(modifier: Modifier, address: String?, code: String) {
+private fun PhoneCard(modifier: Modifier, address: String?, code: String, needsPermission: Boolean, onRequestPermission: () -> Unit) {
     val shape = RoundedCornerShape(DS.RadiusXl)
     var bigQr by remember { mutableStateOf(false) }
     // The card scrolls (the focused QR code brings the rest into view), so nothing is cut off on small screens
@@ -272,10 +281,18 @@ private fun PhoneCard(modifier: Modifier, address: String?, code: String) {
             color = Muted, fontSize = 15.sp, lineHeight = 21.sp
         )
         if (address == null) {
-            Text(
-                "Die Übertragung vom Handy ist gerade nicht verfügbar. Das Gerät muss mit dem WLAN verbunden sein.",
-                color = Color(0xFFFFB86B), fontSize = 17.sp, lineHeight = 24.sp
-            )
+            if (needsPermission) {
+                Text(
+                    "Die App braucht die Berechtigung „Lokales Netzwerk“, damit das Handy den Fernseher erreichen kann.",
+                    color = Color(0xFFFFB86B), fontSize = 17.sp, lineHeight = 24.sp
+                )
+                PillButton("Berechtigung erteilen", light = true, icon = AIcon.Phone) { onRequestPermission() }
+            } else {
+                Text(
+                    "Die Übertragung vom Handy ist gerade nicht verfügbar. Das Gerät muss mit dem WLAN verbunden sein.",
+                    color = Color(0xFFFFB86B), fontSize = 17.sp, lineHeight = 24.sp
+                )
+            }
         } else {
             Step(1, "Handy mit demselben WLAN verbinden wie dieses Gerät.")
             Step(2, "Im Browser des Handys diese Adresse öffnen:")

@@ -41,6 +41,7 @@ object RemoteHub {
     @Volatile private var appCtx: Context? = null
 
     fun start(ctx: Context): PhoneImport? {
+        if (!LocalNet.granted(ctx)) return null
         appCtx = ctx.applicationContext
         server?.let { if (active) return it }
         val s = PhoneImport { }

@@ -55,7 +55,13 @@ internal fun TransferSection(ctx: Context) {
         }
     }
     DisposableEffect(Unit) { onDispose { server.stop() } }
-    if (!serving) PillButton("Übertragung im WLAN starten", icon = AIcon.Phone) { serving = server.start() }
+    val perm = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { ok -> if (ok) serving = server.start() }
+    if (!serving) PillButton("Übertragung im WLAN starten", icon = AIcon.Phone) {
+        if (LocalNet.granted(ctx)) serving = server.start()
+        else { LocalNet.markAsked(ctx); runCatching { perm.launch(LocalNet.PERM) } }
+    }
     else {
         Column(
             Modifier.clip(RoundedCornerShape(DS.RadiusM)).background(Color(0x14FFFFFF)).padding(16.dp),

@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Erkennt, wann das Netz nach einem Abbruch zurück ist, damit der Stream sofort neu verbindet -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Ab Android 16/17: Zugriff auf das lokale Netzwerk (Handy-Fernbedienung, QR-Seite) -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Hält CPU und WLAN während der Wiedergabe wach -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />

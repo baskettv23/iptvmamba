@@ -34,6 +34,8 @@ import coil.ImageLoader
 import coil.memory.MemoryCache
 
 class MainActivity : ComponentActivity() {
+    private val localNet = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Load settings early so colors and size are right in the very first frame.
@@ -45,6 +47,11 @@ class MainActivity : ComponentActivity() {
         HomeLayout.init(this); BoomerLayout.init(this)
         SidebarPrefs.init(this)
         Config.init(this)
+        // Android 16/17: ohne diese Laufzeit-Berechtigung erreicht das Handy den QR-Server nicht.
+        if (LocalNet.needed() && !LocalNet.granted(this) && !LocalNet.asked(this)) {
+            LocalNet.markAsked(this)
+            runCatching { localNet.launch(LocalNet.PERM) }
+        }
         LiveSettings.init(this)
         Recorder.attach(this)
         MobilePrefs.apply(this)

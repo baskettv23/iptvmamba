@@ -397,13 +397,37 @@ class PhoneImport(private val onReceive: (PhoneInput) -> Unit) {
         /** Largest uploadable playlist file. */
         const val MAX_UPLOAD = 400L * 1024 * 1024
 
-        /** Local IPv4 address of the device in the Wi-Fi/LAN (or null). */
+        /** Local IPv4 address of the device in the Wi-Fi/LAN (or null). VPN, mobile and virtual interfaces are skipped. */
         fun localIp(): String? = runCatching {
-            NetworkInterface.getNetworkInterfaces().toList()
-                .filter { it.isUp && !it.isLoopback }
-                .flatMap { it.inetAddresses.toList() }
-                .firstOrNull { it is Inet4Address && it.isSiteLocalAddress }
-                ?.hostAddress
+            val candidates = ArrayList<Pair<Int, String>>()
+            for (ni in NetworkInterface.getNetworkInterfaces()) {
+                if (!ni.isUp || ni.isLoopback) continue
+                val n = ni.name.lowercase()
+                if (n.startsWith("tun") || n.startsWith("tap") || n.startsWith("ppp") ||
+                    n.startsWith("rmnet") || n.startsWith("ccmni") || n.startsWith("dummy") ||
+                    n.startsWith("p2p") || n.startsWith("clat") || n.startsWith("ip6tnl") ||
+                    n.startsWith("sit") || n.startsWith("gre") || n.startsWith("v4-")
+                ) continue
+                val ifScore = when {
+                    n.startsWith("wlan") -> 100
+                    n.startsWith("eth") -> 90
+                    n.startsWith("ap") || n.startsWith("swlan") -> 80
+                    n.startsWith("rndis") || n.startsWith("usb") -> 70
+                    else -> 10
+                }
+                for (a in ni.inetAddresses) {
+                    if (a !is Inet4Address || !a.isSiteLocalAddress || a.isLoopbackAddress) continue
+                    val host = a.hostAddress ?: continue
+                    val addrScore = when {
+                        host.startsWith("192.168.") -> 30
+                        host.startsWith("10.") -> 20
+                        host.startsWith("172.") -> 10
+                        else -> 0
+                    }
+                    candidates += (ifScore + addrScore) to host
+                }
+            }
+            candidates.maxByOrNull { it.first }?.second
         }.getOrNull()
     }
 }

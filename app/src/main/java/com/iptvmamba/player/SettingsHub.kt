@@ -1258,9 +1258,12 @@ private fun ApiKeysPage(ctx: Context) {
     var tmdb by remember { mutableStateOf(Config.ownTmdb(ctx)) }
     var omdb by remember { mutableStateOf(Config.ownOmdb(ctx)) }
     var rd by remember { mutableStateOf(Config.ownRd(ctx)) }
+    var tb by remember { mutableStateOf(Config.ownTb(ctx)) }
+    var addon by remember { mutableStateOf(Config.ownAddon(ctx)) }
     var tmdbStatus by remember { mutableStateOf("") }
     var omdbStatus by remember { mutableStateOf("") }
     var rdStatus by remember { mutableStateOf("") }
+    var tbStatus by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     Hint("Die App enthält keine eigenen Schlüssel. Mit deinen eigenen, kostenlosen Schlüsseln zeigt sie Poster, Beschreibungen, Besetzung, Trailer, automatische Genres sowie IMDb- und Rotten-Tomatoes-Wertungen. Ohne Schlüssel übernimmt sie Beschreibung, Cover und Bewertung von deinem Anbieter (bei Xtream-Zugängen).")
 
@@ -1268,6 +1271,15 @@ private fun ApiKeysPage(ctx: Context) {
     Field(rd, { rd = it; rdStatus = "" }, "Real-Debrid API-Token")
     Hint("Optional, für die Schaltfläche „Streams“ auf der Film-/Serienseite: Torrentio liefert Treffer, Real-Debrid wandelt sie in direkte Links um. Token erstellen unter real-debrid.com/apitoken (kostenpflichtiges Konto nötig).")
     if (rdStatus.isNotBlank()) Text(rdStatus, color = if (rdStatus == "Token gültig") Accent2 else Muted, fontSize = 16.sp)
+
+    SectionTitle("TorBox (Alternative zu Real-Debrid)")
+    Field(tb, { tb = it; tbStatus = "" }, "TorBox API-Token")
+    Hint("Optional. TorBox wandelt Torrent-Treffer in direkte Links um, genau wie Real-Debrid. Token erstellen unter torbox.app (kostenpflichtiges Konto nötig). Sind beide Dienste eingetragen, werden beide abgefragt.")
+    if (tbStatus.isNotBlank()) Text(tbStatus, color = if (tbStatus == "Token gültig") Accent2 else Muted, fontSize = 16.sp)
+
+    SectionTitle("Stremio-/Nuvio-Addon (optional)")
+    Field(addon, { addon = it }, "Addon-URL, z. B. https://…/manifest.json")
+    Hint("Optional. Beliebiger Stremio-Addon mit Streams (Nuvio, Comet, MediaFusion, AIOStreams …). Die App liest die Stream-Liste des Addons. Mehrere Addons durch Komma trennen. Die NuvioTV-App selbst wird über die Schaltfläche „NuvioTV“ im Streams-Fenster geöffnet.")
 
     SectionTitle("TMDB (Film-Infos)")
     Field(tmdb, { tmdb = it; tmdbStatus = "" }, "TMDB API-Schlüssel (v3)")
@@ -1287,17 +1299,22 @@ private fun ApiKeysPage(ctx: Context) {
             busy = true
             Config.save(ctx, tmdb, omdb)
             Config.saveRd(ctx, rd)
+            Config.saveTb(ctx, tb)
+            Config.saveAddon(ctx, addon)
             tmdb = Config.ownTmdb(ctx); omdb = Config.ownOmdb(ctx); rd = Config.ownRd(ctx)
+            tb = Config.ownTb(ctx); addon = Config.ownAddon(ctx)
             scope.launch {
                 tmdbStatus = if (tmdb.isEmpty()) "" else KeyCheck.tmdb(tmdb) ?: "Schlüssel gültig"
                 omdbStatus = if (omdb.isEmpty()) "" else KeyCheck.omdb(omdb) ?: "Schlüssel gültig"
                 rdStatus = if (rd.isEmpty()) "" else RealDebrid.check(rd) ?: "Token gültig"
+                tbStatus = if (tb.isEmpty()) "" else TorBox.check(tb) ?: "Token gültig"
                 busy = false
             }
         }
-        if (tmdb.isNotEmpty() || omdb.isNotEmpty() || rd.isNotEmpty()) ConfirmPill("Schlüssel entfernen") {
-            tmdb = ""; omdb = ""; rd = ""; tmdbStatus = ""; omdbStatus = ""; rdStatus = ""
-            Config.save(ctx, "", ""); Config.saveRd(ctx, "")
+        if (tmdb.isNotEmpty() || omdb.isNotEmpty() || rd.isNotEmpty() || tb.isNotEmpty() || addon.isNotEmpty()) ConfirmPill("Schlüssel entfernen") {
+            tmdb = ""; omdb = ""; rd = ""; tb = ""; addon = ""
+            tmdbStatus = ""; omdbStatus = ""; rdStatus = ""; tbStatus = ""
+            Config.save(ctx, "", ""); Config.saveRd(ctx, ""); Config.saveTb(ctx, ""); Config.saveAddon(ctx, "")
         }
     }
 }

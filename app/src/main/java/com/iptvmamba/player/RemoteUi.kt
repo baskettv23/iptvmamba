@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,8 +43,13 @@ object RemoteUi {
 fun RemoteOverlay(modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     val focus = remember { FocusRequester() }
-    val ip = remember { PhoneImport.localIp() }
-    val server = remember { RemoteHub.start(ctx) }
+    var granted by remember { mutableStateOf(LocalNet.granted(ctx)) }
+    var retry by remember { mutableIntStateOf(0) }
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { ok -> granted = ok; retry++ }
+    val ip = remember(retry) { PhoneImport.localIp() }
+    val server = remember(granted, retry) { if (granted) RemoteHub.start(ctx) else null }
     fun close() { RemoteUi.show = false }
     BackHandler { close() }
     LaunchedEffect(Unit) { delay(150); runCatching { focus.requestFocus() } }
@@ -58,9 +64,22 @@ fun RemoteOverlay(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text("Mit dem Handy suchen", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
-            if (ip == null) Text("Das Gerät ist nicht mit einem WLAN verbunden.", color = Color(0xFFFFB86B), fontSize = 17.sp)
-            else if (server == null) Text("Der Server konnte nicht gestartet werden.", color = Color(0xFFFFB86B), fontSize = 17.sp)
-            else {
+            if (!granted) {
+                Text(
+                    "Die App braucht die Berechtigung „Lokales Netzwerk“, damit das Handy den Fernseher erreichen kann.",
+                    color = Color(0xFFFFB86B), fontSize = 17.sp
+                )
+                PillButton("Berechtigung erteilen", light = true) {
+                    LocalNet.markAsked(ctx)
+                    runCatching { launcher.launch(LocalNet.PERM) }
+                }
+            } else if (ip == null) {
+                Text("Das Gerät ist nicht mit einem WLAN verbunden.", color = Color(0xFFFFB86B), fontSize = 17.sp)
+                PillButton("Erneut versuchen", light = true) { retry++ }
+            } else if (server == null) {
+                Text("Der Server konnte nicht gestartet werden.", color = Color(0xFFFFB86B), fontSize = 17.sp)
+                PillButton("Erneut versuchen", light = true) { retry++ }
+            } else {
                 val addr = "http://$ip:${server.port}/r?code=${server.code}"
                 QrImage(addr, 280.dp)
                 Text("Mit der Handy-Kamera scannen", color = Muted, fontSize = 16.sp)

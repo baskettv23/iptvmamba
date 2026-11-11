@@ -23,6 +23,12 @@ object Config {
     /** Real-Debrid API token (for torrent streams via Torrentio). Optional. */
     @Volatile var RD_KEY: String = ""
         private set
+    /** TorBox API token (alternative debrid service). Optional. */
+    @Volatile var TB_KEY: String = ""
+        private set
+    /** Optional Stremio/Nuvio add-on base URL(s), comma separated. */
+    @Volatile var ADDON_URL: String = ""
+        private set
     /** true if the key was entered in the app (not from secrets.properties). */
     var tmdbOwn by androidx.compose.runtime.mutableStateOf(false)
         private set
@@ -40,6 +46,9 @@ object Config {
     /** Real-Debrid tokens may also contain "-" and "_" (both URL-safe). */
     fun cleanToken(s: String): String = s.trim().filter { it.isLetterOrDigit() || it == '-' || it == '_' }.take(128)
 
+    /** Add-on URLs: keep the text, only remove control characters. Multiple URLs may be comma separated. */
+    fun cleanUrl(s: String): String = s.trim().replace("\n", ",").filter { it.code >= 32 }.take(512)
+
     @Synchronized
     fun init(c: Context) {
         if (inited) return
@@ -48,9 +57,13 @@ object Config {
         val t = clean(p.getString("tmdb", "").orEmpty())
         val o = clean(p.getString("omdb", "").orEmpty())
         val r = cleanToken(p.getString("rd", "").orEmpty())
+        val tb = cleanToken(p.getString("tb", "").orEmpty())
+        val addon = cleanUrl(p.getString("addon", "").orEmpty())
         if (t.isNotEmpty()) { TMDB_KEY = t; tmdbOwn = true }
         if (o.isNotEmpty()) { OMDB_KEY = o; omdbOwn = true }
         if (r.isNotEmpty()) { RD_KEY = r; rdOwn = true }
+        if (tb.isNotEmpty()) TB_KEY = tb
+        ADDON_URL = addon
     }
 
     /** Stores the entered keys; empty = remove key (then secrets.properties applies again if present). */
@@ -66,12 +79,34 @@ object Config {
     fun ownTmdb(c: Context): String = clean(prefs(c).getString("tmdb", "").orEmpty())
     fun ownOmdb(c: Context): String = clean(prefs(c).getString("omdb", "").orEmpty())
     fun ownRd(c: Context): String = cleanToken(prefs(c).getString("rd", "").orEmpty())
+    fun ownTb(c: Context): String = cleanToken(prefs(c).getString("tb", "").orEmpty())
+    fun ownAddon(c: Context): String = cleanUrl(prefs(c).getString("addon", "").orEmpty())
+
+    /** Configured Stremio/Nuvio add-on base URLs (comma separated, empty entries removed). */
+    fun addons(c: Context): List<String> =
+        ownAddon(c).split(',').map { it.trim() }.filter { it.isNotBlank() }
 
     /** Stores/removes the Real-Debrid token. */
     fun saveRd(c: Context, rd: String) {
         val r = cleanToken(rd)
         prefs(c).edit().putString("rd", r).apply()
         RD_KEY = r; rdOwn = r.isNotEmpty()
+        inited = true
+    }
+
+    /** Stores/removes the TorBox token. */
+    fun saveTb(c: Context, tb: String) {
+        val t = cleanToken(tb)
+        prefs(c).edit().putString("tb", t).apply()
+        TB_KEY = t
+        inited = true
+    }
+
+    /** Stores/removes the optional Stremio/Nuvio add-on URL(s). */
+    fun saveAddon(c: Context, url: String) {
+        val u = cleanUrl(url)
+        prefs(c).edit().putString("addon", u).apply()
+        ADDON_URL = u
         inited = true
     }
 }
