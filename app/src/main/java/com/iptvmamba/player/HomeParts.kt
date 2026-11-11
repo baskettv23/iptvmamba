@@ -197,11 +197,14 @@ fun HeroButton(text: String, icon: AIcon, primary: Boolean, modifier: Modifier =
     val pulse = rememberPulse()
     val s by animateFloatAsState(if (f) focusScale(1.06f) else 1f, label = "herobtn")
     val shape = RoundedCornerShape(50)
-    val ink = if (f) DS.FocusInk else Color.White
+    val bg = if (f) DS.FocusFill else if (primary) Accent1 else Accent1.copy(alpha = 0.16f)
+    val bd = if (f) DS.FocusFill else if (primary) Accent1 else Accent1.copy(alpha = 0.55f)
+    val ink = if (f) DS.FocusInk else if (primary) Look.onAccent else Color.White
+    val iconInk = if (f) DS.FocusInk else if (primary) Look.onAccent else Accent2
     Row(
         modifier.graphicsLayer { val k = s * pulse.scale; scaleX = k; scaleY = k }.height(dpx(h)).clip(shape)
-            .background(if (f) DS.FocusFill else Color(0x33FFFFFF))
-            .border(1.dp, if (f) DS.FocusFill else Color(0x40FFFFFF), shape)
+            .background(bg)
+            .border(1.dp, bd, shape)
             .onFocusChanged { f = it.isFocused }
             .trackFocus()
             .clickable(onClick = { pulse.pulse(); onClick() })
@@ -209,7 +212,7 @@ fun HeroButton(text: String, icon: AIcon, primary: Boolean, modifier: Modifier =
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(dpx(h * 0.28f))
     ) {
-        AppIcon(icon, if (f) DS.FocusInk else if (primary) Accent1 else Color.White, size = dpx(h * 0.4f))
+        AppIcon(icon, iconInk, size = dpx(h * 0.4f))
         Text(text, color = ink, fontSize = spx(h * 0.34f), fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }

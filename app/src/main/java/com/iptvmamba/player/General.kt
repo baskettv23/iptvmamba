@@ -21,6 +21,8 @@ object General {
     var resumeLive by mutableStateOf(false)
     /** Resume the last watched movie / series at start at the remembered position. */
     var resumeVod by mutableStateOf(false)
+    /** Kurzes Markenvideo beim Öffnen der App (beliebige Taste überspringt). */
+    var introVideo by mutableStateOf(true)
     var confirmExit by mutableStateOf(true)
     /** Live TV: show the quality variants of one channel (8K/4K/FHD/HD/SD) as a single row. */
     var bundleLive by mutableStateOf(true)
@@ -115,6 +117,7 @@ object General {
         startTab = p.getInt("start_tab", 0).coerceIn(0, 4)
         resumeLive = p.getBoolean("resume_live", false)
         resumeVod = p.getBoolean("resume_vod", false)
+        introVideo = p.getBoolean("intro_video", true)
         confirmExit = p.getBoolean("confirm_exit", true)
         bundleLive = p.getBoolean("bundle_live", true)
         refreshMode = p.getInt("refresh_mode", 0).coerceIn(0, 4)
@@ -151,6 +154,7 @@ object General {
     fun setStartTab(c: Context, v: Int) { startTab = v.coerceIn(0, 4); prefs(c).edit().putInt("start_tab", startTab).apply() }
     fun setResumeLive(c: Context, v: Boolean) { resumeLive = v; prefs(c).edit().putBoolean("resume_live", v).apply() }
     fun setResumeVod(c: Context, v: Boolean) { resumeVod = v; prefs(c).edit().putBoolean("resume_vod", v).apply() }
+    fun setIntroVideo(c: Context, v: Boolean) { introVideo = v; prefs(c).edit().putBoolean("intro_video", v).apply() }
     fun setBundleLive(c: Context, v: Boolean) { bundleLive = v; prefs(c).edit().putBoolean("bundle_live", v).apply() }
     fun setConfirmExit(c: Context, v: Boolean) { confirmExit = v; prefs(c).edit().putBoolean("confirm_exit", v).apply() }
     fun setPlan(c: Context, mode: Int = refreshMode, interval: Int = refreshInterval, hour: Int = refreshHour, minute: Int = refreshMinute, dow: Int = refreshDow) {
