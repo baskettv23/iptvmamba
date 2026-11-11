@@ -53,6 +53,10 @@ android {
             storePassword = keystore.getProperty("storePassword")
             keyAlias = keystore.getProperty("keyAlias")
             keyPassword = keystore.getProperty("keyPassword")
+            // All signature schemes for maximum compatibility with TV boxes / older installers.
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
         }
     }
 
