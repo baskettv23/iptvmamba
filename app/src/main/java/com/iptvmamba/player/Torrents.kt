@@ -380,7 +380,7 @@ object ImdbLookup {
     }
 }
 
-/** Opens installed stream apps (Stremio, NuvioTV, CloudStream) with the current title. */
+/** Opens an installed Stremio app with the current title. */
 object StreamApps {
     private fun open(ctx: Context, intent: Intent): Boolean =
         runCatching { ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true }.getOrDefault(false)
@@ -397,14 +397,6 @@ object StreamApps {
         if (open(ctx, Intent(Intent.ACTION_VIEW, Uri.parse(uri)))) return true
         return launchPkg(ctx, listOf("com.stremio.one"))
     }
-
-    fun cloudstream(ctx: Context, title: String): Boolean {
-        val uri = "cloudstreamsearch://" + URLEncoder.encode(title, "UTF-8").replace("+", "%20")
-        if (open(ctx, Intent(Intent.ACTION_VIEW, Uri.parse(uri)))) return true
-        return launchPkg(ctx, listOf("com.lagradost.cloudstream3"))
-    }
-
-    fun nuvio(ctx: Context): Boolean = launchPkg(ctx, listOf("com.nuvio.tv", "com.nuvio.app"))
 }
 
 /** Overlay list of stream results from Torrentio/TorBox and optional Stremio/Nuvio add-ons. */
@@ -516,12 +508,6 @@ fun StreamPicker(req: TorrentReq, onClose: () -> Unit, onPlay: (String) -> Unit)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 PillButton("Stremio", light = true, raw = true) {
                     if (!StreamApps.stremio(ctx, req, imdbId)) notice = "Stremio ist nicht installiert."
-                }
-                PillButton("NuvioTV", light = true, raw = true) {
-                    if (!StreamApps.nuvio(ctx)) notice = "NuvioTV ist nicht installiert."
-                }
-                PillButton("CloudStream", light = true, raw = true) {
-                    if (!StreamApps.cloudstream(ctx, req.title)) notice = "CloudStream ist nicht installiert."
                 }
                 PillButton(if (spanishFirst) "Spanisch zuerst: An" else "Spanisch zuerst: Aus", light = true) {
                     spanishFirst = !spanishFirst

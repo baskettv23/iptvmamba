@@ -1279,7 +1279,7 @@ private fun ApiKeysPage(ctx: Context) {
 
     SectionTitle("Stremio-/Nuvio-Addon (optional)")
     Field(addon, { addon = it }, "Addon-URL, z. B. https://…/manifest.json")
-    Hint("Optional. Beliebiger Stremio-Addon mit Streams (Nuvio, Comet, MediaFusion, AIOStreams …). Die App liest die Stream-Liste des Addons. Mehrere Addons durch Komma trennen. Die NuvioTV-App selbst wird über die Schaltfläche „NuvioTV“ im Streams-Fenster geöffnet.")
+    Hint("Optional. Beliebiger Stremio-Addon mit Streams (Nuvio, Comet, MediaFusion, AIOStreams …). Die App liest die Stream-Liste des Addons. Mehrere Addons durch Komma trennen.")
 
     SectionTitle("TMDB (Film-Infos)")
     Field(tmdb, { tmdb = it; tmdbStatus = "" }, "TMDB API-Schlüssel (v3)")
