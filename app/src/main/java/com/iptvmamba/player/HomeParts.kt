@@ -66,7 +66,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -197,7 +199,11 @@ fun HeroButton(text: String, icon: AIcon, primary: Boolean, modifier: Modifier =
     val pulse = rememberPulse()
     val s by animateFloatAsState(if (f) focusScale(1.06f) else 1f, label = "herobtn")
     val shape = RoundedCornerShape(50)
-    val bg = if (f) DS.FocusFill else if (primary) Accent1 else Accent1.copy(alpha = 0.16f)
+    val bg: Brush = when {
+        f -> SolidColor(DS.FocusFill)
+        primary -> Brush.linearGradient(listOf(Accent1, lerp(Accent1, Color.Black, 0.22f)))
+        else -> SolidColor(Accent1.copy(alpha = 0.16f))
+    }
     val bd = if (f) DS.FocusFill else if (primary) Accent1 else Accent1.copy(alpha = 0.55f)
     val ink = if (f) DS.FocusInk else if (primary) Look.onAccent else Color.White
     val iconInk = if (f) DS.FocusInk else if (primary) Look.onAccent else Accent2

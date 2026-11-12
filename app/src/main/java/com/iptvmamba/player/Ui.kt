@@ -6,11 +6,13 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.input.key.type
@@ -40,7 +42,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -164,6 +168,35 @@ fun Modifier.focusGlow(focused: Boolean, shape: androidx.compose.ui.graphics.Sha
     // Round 14 (user's wish): no colored glow around selected fields any more, only a subtle dark shadow
     if (!focused) this else this.shadow(10.dp, shape, clip = false, ambientColor = Tok.Lift, spotColor = Tok.Lift)
 
+/**
+ * Cinematic glass panel: a subtle vertical gradient, a hairline edge and, for dialogs, a soft drop shadow.
+ * Use [elevated] = false for large panels that sit inside a settings page.
+ */
+@Composable
+fun GlassSurface(
+    modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(DS.RadiusL),
+    strong: Boolean = true,
+    elevated: Boolean = true,
+    content: @Composable BoxScope.() -> Unit
+) {
+    val top = if (strong) lerp(Look.surf2, Color.White, 0.04f) else Look.surf
+    val bottom = Look.bg.copy(alpha = if (strong) 0.98f else 0.94f)
+    Box(
+        modifier
+            .then(
+                if (elevated) Modifier.shadow(
+                    26.dp, shape, clip = false,
+                    ambientColor = Color(0xB3000000), spotColor = Color(0xB3000000)
+                ) else Modifier
+            )
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(top, bottom)))
+            .border(BorderStroke(1.dp, Brush.verticalGradient(listOf(Color(0x33FFFFFF), Color(0x0DFFFFFF)))), shape),
+        content = content
+    )
+}
+
 @Composable
 fun FocusButton(text: String, modifier: Modifier = Modifier, primary: Boolean = false, compact: Boolean = false, onClick: () -> Unit) {
     var f by remember { mutableStateOf(false) }
@@ -173,7 +206,14 @@ fun FocusButton(text: String, modifier: Modifier = Modifier, primary: Boolean = 
         modifier
             .graphicsLayer { scaleX = s; scaleY = s }
             .clip(shape)
-            .background(if (f) SolidColor(DS.FocusFill) else if (primary) SolidColor(lerp(DS.Overlay3, Look.accent1, 0.32f)) else SolidColor(DS.Overlay3))
+            .background(
+                when {
+                    f -> SolidColor(DS.FocusFill)
+                    primary -> Brush.linearGradient(listOf(Look.accent1, lerp(Look.accent1, Color.Black, 0.22f)))
+                    else -> SolidColor(DS.Overlay3)
+                }
+            )
+            .border(BorderStroke(1.dp, if (!f && primary) Color.White.copy(alpha = 0.14f) else Color.Transparent), shape)
             .onFocusChanged { f = it.isFocused }
             .clickable(onClick = onClick)
             .padding(horizontal = if (compact) 20.dp else 28.dp, vertical = if (compact) 9.dp else 14.dp),

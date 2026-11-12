@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -54,48 +56,59 @@ fun RemoteOverlay(modifier: Modifier = Modifier) {
     BackHandler { close() }
     LaunchedEffect(Unit) { delay(150); runCatching { focus.requestFocus() } }
     androidx.compose.foundation.layout.Box(
-        modifier.fillMaxSize().background(Color(0xCC000000))
+        modifier.fillMaxSize().background(
+            Brush.radialGradient(listOf(Color(0xC8000000), Color(0xF0000000)))
+        )
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { },
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            Modifier.widthIn(max = 640.dp).clip(RoundedCornerShape(DS.RadiusM)).background(Color(0xFF0F1730)).padding(28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text("Mit dem Handy suchen", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
-            if (!granted) {
-                Text(
-                    "Die App braucht die Berechtigung „Lokales Netzwerk“, damit das Handy den Fernseher erreichen kann.",
-                    color = Color(0xFFFFB86B), fontSize = 17.sp
-                )
-                PillButton("Berechtigung erteilen", light = true) {
-                    LocalNet.markAsked(ctx)
-                    runCatching { launcher.launch(LocalNet.PERM) }
+        GlassSurface(Modifier.widthIn(max = 640.dp)) {
+            Column(
+                Modifier.padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    androidx.compose.foundation.layout.Box(
+                        Modifier.size(46.dp).clip(RoundedCornerShape(DS.RadiusM))
+                            .background(Look.accent1.copy(alpha = 0.16f)),
+                        contentAlignment = Alignment.Center
+                    ) { AppIcon(AIcon.Phone, Look.accent2, size = 24.dp) }
+                    Text("Mit dem Handy suchen", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.4).sp)
                 }
-            } else if (ip == null) {
-                Text("Das Gerät ist nicht mit einem WLAN verbunden.", color = Color(0xFFFFB86B), fontSize = 17.sp)
-                PillButton("Erneut versuchen", light = true) { retry++ }
-            } else if (server == null) {
-                Text("Der Server konnte nicht gestartet werden.", color = Color(0xFFFFB86B), fontSize = 17.sp)
-                PillButton("Erneut versuchen", light = true) { retry++ }
-            } else {
-                val addr = "http://$ip:${server.port}/r?code=${server.code}"
-                QrImage(addr, 280.dp)
-                Text("Mit der Handy-Kamera scannen", color = Muted, fontSize = 16.sp)
-                Text("http://$ip:${server.port}/r", color = Accent2, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, raw = true)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Code", color = Muted, fontSize = 16.sp)
-                    Text(server.code, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, raw = true)
+                if (!granted) {
+                    Text(
+                        "Die App braucht die Berechtigung „Lokales Netzwerk“, damit das Handy den Fernseher erreichen kann.",
+                        color = Color(0xFFFFB86B), fontSize = 17.sp
+                    )
+                    PillButton("Berechtigung erteilen", light = true) {
+                        LocalNet.markAsked(ctx)
+                        runCatching { launcher.launch(LocalNet.PERM) }
+                    }
+                } else if (ip == null) {
+                    Text("Das Gerät ist nicht mit einem WLAN verbunden.", color = Color(0xFFFFB86B), fontSize = 17.sp)
+                    PillButton("Erneut versuchen", light = true) { retry++ }
+                } else if (server == null) {
+                    Text("Der Server konnte nicht gestartet werden.", color = Color(0xFFFFB86B), fontSize = 17.sp)
+                    PillButton("Erneut versuchen", light = true) { retry++ }
+                } else {
+                    val addr = "http://$ip:${server.port}/r?code=${server.code}"
+                    QrImage(addr, 280.dp)
+                    Text("Mit der Handy-Kamera scannen", color = Muted, fontSize = 16.sp)
+                    Text("http://$ip:${server.port}/r", color = Accent2, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, raw = true)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Code", color = Muted, fontSize = 16.sp)
+                        Text(server.code, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, raw = true)
+                    }
+                    Text(
+                        "Suche und starte Filme, Serien und Sender am Handy. Handy und Fernseher müssen im selben WLAN sein.",
+                        color = Muted, fontSize = 14.sp
+                    )
                 }
-                Text(
-                    "Suche und starte Filme, Serien und Sender am Handy. Handy und Fernseher müssen im selben WLAN sein.",
-                    color = Muted, fontSize = 14.sp
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PillButton("Schließen", Modifier.focusRequester(focus), light = true) { close() }
-                if (server != null) PillButton("Beenden") { RemoteHub.stop(); close() }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PillButton("Schließen", Modifier.focusRequester(focus), light = true) { close() }
+                    if (server != null) PillButton("Beenden") { RemoteHub.stop(); close() }
+                }
             }
         }
     }

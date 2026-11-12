@@ -8,8 +8,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -22,6 +24,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -32,7 +36,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.layout.BoxWithConstraints
 
 /*
  * Shared building blocks of the UI:
@@ -92,8 +95,30 @@ fun Modifier.screenEnter(key: Any? = Unit): Modifier {
     return this.graphicsLayer {
         alpha = a.value
         translationY = (1f - a.value) * 18.dp.toPx()
+        scaleX = 0.985f + a.value * 0.015f
+        scaleY = 0.985f + a.value * 0.015f
         compositingStrategy = CompositingStrategy.ModulateAlpha
     }
+}
+
+/**
+ * Soft cinematic color wash that follows the focused title. The color is read in the draw phase,
+ * so changing the focus only redraws the background instead of recomposing the screen.
+ */
+@Composable
+fun AmbientWash(color: () -> Color, modifier: Modifier = Modifier) {
+    Box(
+        modifier.fillMaxSize().drawBehind {
+            val c = color()
+            drawRect(
+                Brush.radialGradient(
+                    colors = listOf(c.copy(alpha = 0.16f), c.copy(alpha = 0.05f), Color.Transparent),
+                    center = Offset(size.width * 0.74f, size.height * 0.10f),
+                    radius = size.maxDimension * 0.85f
+                )
+            )
+        }
+    )
 }
 
 /** Brief give on confirming: call [pulse], use [scale] in graphicsLayer. */

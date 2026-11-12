@@ -148,7 +148,7 @@ fun PosterCard(
     val m = st.meta
     var f by remember { mutableStateOf(false) }
     val s by animateFloatAsState(if (f) focusScale(1.08f) else 1f, label = "poster")
-    val border by animateColorAsState(if (f) Accent2 else Color.Transparent, label = "pborder")
+    val border by animateColorAsState(if (f) Accent2 else Color(0x1AFFFFFF), label = "pborder")
     val shape = RoundedCornerShape(DS.RadiusM)
     val live = item.kind == Kind.LIVE
     val img: String? = when {
@@ -184,6 +184,7 @@ fun PosterCard(
                 // Broken (on playback "no longer available" or failed several times): warning icon instead of artwork
                 if (item.kind != Kind.SERIES && DeadLinks.isDead(item.url)) Badge("Gestört", DS.Scrim, DS.Gold, AIcon.Warning) else Badge(kindLabel(item.kind), DS.Scrim)
             }
+            Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color(0x66000000))))
             qualityOf(item)?.let { Box(Modifier.align(Alignment.TopEnd).padding(8.dp)) { QualityBadge(it) } }
             m?.rating?.let {
                 Box(Modifier.align(Alignment.BottomEnd).padding(8.dp)) {
@@ -213,7 +214,7 @@ fun LiveCard(item: Item, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     var f by remember { mutableStateOf(false) }
     val s by animateFloatAsState(if (f) focusScale(1.08f) else 1f, label = "live")
-    val border by animateColorAsState(if (f) Accent2 else Color.Transparent, label = "lborder")
+    val border by animateColorAsState(if (f) Accent2 else Color(0x1AFFFFFF), label = "lborder")
     val shape = RoundedCornerShape(DS.RadiusM)
     Column(
         modifier.graphicsLayer { scaleX = s; scaleY = s }

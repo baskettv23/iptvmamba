@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -488,63 +489,73 @@ fun StreamPicker(req: TorrentReq, onClose: () -> Unit, onPlay: (String) -> Unit)
     }
 
     BackHandler(onBack = onClose)
-    Box(Modifier.fillMaxSize().background(Color(0xCC000000)), contentAlignment = Alignment.Center) {
-        Column(
-            Modifier.fillMaxWidth(0.82f).fillMaxHeight(0.88f)
-                .clip(RoundedCornerShape(20.dp)).background(Surf).border(1.dp, DS.Hairline, RoundedCornerShape(20.dp))
-                .padding(22.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Column(Modifier.weight(1f)) {
-                    Text("Streams", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-                    Text(
-                        req.title + (if (req.season > 0 && req.episode > 0) " · S${req.season}E${req.episode}" else ""),
-                        color = Muted, fontSize = 14.sp, maxLines = 1
-                    )
+    Box(
+        Modifier.fillMaxSize().background(
+            Brush.radialGradient(listOf(Color(0xC8000000), Color(0xF0000000)))
+        ),
+        contentAlignment = Alignment.Center
+    ) {
+        GlassSurface(Modifier.fillMaxWidth(0.82f).fillMaxHeight(0.88f)) {
+            Column(
+                Modifier.fillMaxSize().padding(22.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Box(
+                        Modifier.size(46.dp).clip(RoundedCornerShape(DS.RadiusM))
+                            .background(Look.accent1.copy(alpha = 0.16f)),
+                        contentAlignment = Alignment.Center
+                    ) { AppIcon(AIcon.Download, Look.accent2, size = 24.dp) }
+                    Column(Modifier.weight(1f)) {
+                        Text("Streams", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.4).sp)
+                        Text(
+                            req.title + (if (req.season > 0 && req.episode > 0) " · S${req.season}E${req.episode}" else ""),
+                            color = Muted, fontSize = 14.sp, maxLines = 1
+                        )
+                    }
+                    PillButton("Zurück", light = true) { onClose() }
                 }
-                PillButton("Zurück", light = true) { onClose() }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                PillButton("Stremio", light = true, raw = true) {
-                    if (!StreamApps.stremio(ctx, req, imdbId)) notice = "Stremio ist nicht installiert."
-                }
-                PillButton(if (spanishFirst) "Spanisch zuerst: An" else "Spanisch zuerst: Aus", light = true) {
-                    spanishFirst = !spanishFirst
-                }
-            }
-            notice?.let { Text(it, color = Color(0xFFFFB454), fontSize = 15.sp) }
-            when {
-                loading -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Spinner(Accent2, Modifier.size(30.dp))
-                    Text("Streams werden gesucht …", color = Muted, fontSize = 17.sp)
-                }
-                error != null -> {
-                    Text(error ?: "", color = Color(0xFFFFB454), fontSize = 17.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PillButton("Erneut versuchen", light = true) { tryNo++ }
-                        PillButton("Zurück", light = true) { onClose() }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PillButton("Stremio", light = true, raw = true) {
+                        if (!StreamApps.stremio(ctx, req, imdbId)) notice = "Stremio ist nicht installiert."
+                    }
+                    PillButton(if (spanishFirst) "Spanisch zuerst: An" else "Spanisch zuerst: Aus", light = true) {
+                        spanishFirst = !spanishFirst
                     }
                 }
-                else -> {
-                    if (resolving) Text("Stream wird vorbereitet …", color = Accent2, fontSize = 15.sp)
-                    Column(
-                        Modifier.weight(1f).verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        sorted.forEachIndexed { idx, s ->
-                            StreamRow(s, if (idx == 0) first else null) { pick(s) }
+                notice?.let { Text(it, color = Color(0xFFFFB454), fontSize = 15.sp) }
+                when {
+                    loading -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Spinner(Accent2, Modifier.size(30.dp))
+                        Text("Streams werden gesucht …", color = Muted, fontSize = 17.sp)
+                    }
+                    error != null -> {
+                        Text(error ?: "", color = Color(0xFFFFB454), fontSize = 17.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            PillButton("Erneut versuchen", light = true) { tryNo++ }
+                            PillButton("Zurück", light = true) { onClose() }
                         }
                     }
-                    val summary = buildList {
-                        add(sorted.size.toString() + " Streams")
-                        if (rd.isNotBlank()) add("Real-Debrid")
-                        if (tb.isNotBlank()) add("TorBox")
-                        addons.mapNotNull { StremioAddon.normalize(it) }.map { StremioAddon.label(it) }.distinct().forEach { add(it) }
-                    }.joinToString(" · ")
-                    Text(summary, color = Muted, fontSize = 13.sp)
-                    if (rd.isBlank() && tb.isBlank()) {
-                        Text("Für Torrent-Treffer ohne direkten Link brauchst du Real-Debrid oder TorBox (Einstellungen → API-Schlüssel).", color = Muted, fontSize = 13.sp)
+                    else -> {
+                        if (resolving) Text("Stream wird vorbereitet …", color = Accent2, fontSize = 15.sp)
+                        Column(
+                            Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            sorted.forEachIndexed { idx, s ->
+                                StreamRow(s, if (idx == 0) first else null) { pick(s) }
+                            }
+                        }
+                        val summary = buildList {
+                            add(sorted.size.toString() + " Streams")
+                            if (rd.isNotBlank()) add("Real-Debrid")
+                            if (tb.isNotBlank()) add("TorBox")
+                            addons.mapNotNull { StremioAddon.normalize(it) }.map { StremioAddon.label(it) }.distinct().forEach { add(it) }
+                        }.joinToString(" · ")
+                        Text(summary, color = Muted, fontSize = 13.sp)
+                        if (rd.isBlank() && tb.isBlank()) {
+                            Text("Für Torrent-Treffer ohne direkten Link brauchst du Real-Debrid oder TorBox (Einstellungen → API-Schlüssel).", color = Muted, fontSize = 13.sp)
+                        }
                     }
                 }
             }

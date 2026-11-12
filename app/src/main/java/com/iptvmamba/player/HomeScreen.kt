@@ -510,6 +510,7 @@ fun HomeScreen(
     val bbA: () -> Float = remember(bbAnim) { { bbAnim.value } }
     val pivotSpec = remember(tab) { PivotSpec(0.5f) { states[tab.coerceIn(0, states.lastIndex)] } }
     Box(Modifier.fillMaxSize()) {
+        AmbientWash({ bbItemState.value?.let { colorFor(it) } ?: Accent1 })
         if (bbTab) BillboardLayer(bbA, bbItemState, Modifier.padding(start = SideStart + dpx(56), top = dpx(64) + (if (SidebarPrefs.pos == SidebarPrefs.TOP) TopBarH else 0.dp)))
         BoxWithConstraints(Modifier.fillMaxSize().sidebarPad()) {
             // Card widths and height of the big picture from the available space (as in the design: everything at a glance)

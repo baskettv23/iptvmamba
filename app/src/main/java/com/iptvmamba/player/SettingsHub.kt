@@ -3,6 +3,7 @@ package com.iptvmamba.player
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -109,7 +110,7 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
         } else {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dpx(18))) {
                 SettingsBack(Modifier.focusRequester(backFocus)) { page = -1 }
-                Text(CATS[page].title, color = Color.White, fontSize = spx(36), fontWeight = FontWeight.ExtraBold)
+                Text(CATS[page].title, color = Color.White, fontSize = spx(36), fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.6).sp)
             }
             // Below the last selectable element there are often still hints: Down at the end brings them into view
             val fm = LocalFocusManager.current
@@ -121,8 +122,15 @@ fun SettingsHub(onAdd: () -> Unit, reload: () -> Unit) {
                         if (!fm.moveFocus(FocusDirection.Down)) endScope.launch { runCatching { endReq.bringIntoView() } }
                         true
                     } else false
-                }.fillMaxWidth().clip(RoundedCornerShape(dpx(18))).background(Color(0x0DFFFFFF))
-                    .border(1.dp, Color(0x1AFFFFFF), RoundedCornerShape(dpx(18))).padding(dpx(26)),
+                }.fillMaxWidth().clip(RoundedCornerShape(dpx(18)))
+                    .background(Brush.verticalGradient(listOf(Color(0x14FFFFFF), Color(0x07FFFFFF))))
+                    .border(
+                        BorderStroke(
+                            1.dp,
+                            Brush.verticalGradient(listOf(Color(0x2EFFFFFF), Color(0x0DFFFFFF)))
+                        ),
+                        RoundedCornerShape(dpx(18))
+                    ).padding(dpx(26)),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
             when (page) {
@@ -174,7 +182,7 @@ private fun SettingsCard(cat: Cat, idx: Int, modifier: Modifier, onClick: () -> 
     val shape = RoundedCornerShape(dpx(14))
     val (c1, c2, ink) = catColors(idx)
     Row(
-        modifier.height(dpx(96)).graphicsLayer { scaleX = s; scaleY = s }.clip(shape)
+        modifier.height(dpx(96)).graphicsLayer { scaleX = s; scaleY = s }.focusGlow(f, shape).clip(shape)
             .background(Brush.horizontalGradient(listOf(c1, c2)))
             .border(if (f) 3.dp else 1.dp, if (f) Color.White else ink.copy(alpha = .22f), shape)
             .onFocusChanged { f = it.isFocused }
@@ -216,7 +224,7 @@ internal fun Hint(text: String) {
 
 @Composable
 internal fun SectionTitle(text: String) {
-    Text(text, color = Color.White, fontSize = spx(22), fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+    Text(text, color = Color.White, fontSize = spx(22), fontWeight = FontWeight.Bold, letterSpacing = (-0.2).sp, modifier = Modifier.padding(top = 8.dp))
 }
 
 /** Choice chip with optional color dots. The chosen entry carries a check mark and a light border. */

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -71,46 +72,48 @@ fun GuideSearchDialog(channels: List<Item>, onPick: (Item) -> Unit, onClose: () 
         value = withContext(Dispatchers.Default) { GuideSearchLogic.search(channels, q, System.currentTimeMillis() / 1000) }
     }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(
-            Modifier.width(1180.dp).heightIn(max = 640.dp).clip(RoundedCornerShape(DS.RadiusL)).background(Tok.GlassStrong).padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text("Im TV-Guide suchen", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SearchKeyboard(
-                Modifier.width(430.dp),
-                onKey = { q = (q + it).take(40) },
-                onSpace = { if (q.isNotEmpty() && !q.endsWith(" ")) q += " " },
-                onDelete = { q = q.dropLast(1) },
-                onClear = { q = "" },
-                onPhone = null, onVoice = null,
-                firstKey = kbFirst, onFocusChange = {}, onRight = { false }
-            )
-            androidx.compose.foundation.layout.Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Field(q, { q = it.take(40) }, "Sender oder Sendung", inner = Modifier.focusRequester(fr), autoOpen = false)
-            if (q.isNotBlank() && hits.isEmpty()) Text("Keine Treffer", color = Muted, fontSize = 15.sp)
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                itemsIndexed(hits) { _, h ->
-                    var f by remember { mutableStateOf(false) }
-                    val e = h.entry
-                    Column(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(DS.RadiusM))
-                            .background(if (f) Color(0x33FFFFFF) else Color(0x0FFFFFFF))
-                            .onFocusChanged { f = it.isFocused }
-                            .clickable { onPick(h.channel) }
-                            .padding(horizontal = 14.dp, vertical = 10.dp)
-                    ) {
-                        Text(raw = true, text = e?.title ?: h.channel.title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            raw = true,
-                            text = if (e == null) h.channel.group else h.channel.title + "  ·  " + dayLabel(e.start) + " " + hhmm(e.start) + " - " + hhmm(e.end),
-                            color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
-                        )
+        GlassSurface(Modifier.width(1180.dp).heightIn(max = 640.dp)) {
+            Column(
+                Modifier.fillMaxSize().padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("Im TV-Guide suchen", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp)
+                androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                SearchKeyboard(
+                    Modifier.width(430.dp),
+                    onKey = { q = (q + it).take(40) },
+                    onSpace = { if (q.isNotEmpty() && !q.endsWith(" ")) q += " " },
+                    onDelete = { q = q.dropLast(1) },
+                    onClear = { q = "" },
+                    onPhone = null, onVoice = null,
+                    firstKey = kbFirst, onFocusChange = {}, onRight = { false }
+                )
+                androidx.compose.foundation.layout.Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Field(q, { q = it.take(40) }, "Sender oder Sendung", inner = Modifier.focusRequester(fr), autoOpen = false)
+                if (q.isNotBlank() && hits.isEmpty()) Text("Keine Treffer", color = Muted, fontSize = 15.sp)
+                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    itemsIndexed(hits) { _, h ->
+                        var f by remember { mutableStateOf(false) }
+                        val e = h.entry
+                        Column(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(DS.RadiusM))
+                                .background(if (f) Color(0x33FFFFFF) else Color(0x0FFFFFFF))
+                                .onFocusChanged { f = it.isFocused }
+                                .clickable { onPick(h.channel) }
+                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                        ) {
+                            Text(raw = true, text = e?.title ?: h.channel.title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                raw = true,
+                                text = if (e == null) h.channel.group else h.channel.title + "  ·  " + dayLabel(e.start) + " " + hhmm(e.start) + " - " + hhmm(e.end),
+                                color = Muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
-            }
-            }
+                }
+                }
             }
         }
     }
