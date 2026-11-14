@@ -62,13 +62,18 @@ fun PillButton(text: String, modifier: Modifier = Modifier, light: Boolean = fal
     val s by animateFloatAsState(if (f) focusScale(1.07f) else 1f, label = "pill")
     val shape = RoundedCornerShape(50)
     val c = buttonColors(f, primary = light)
-    val bg: Brush = if (light && !f) vividBrush() else SolidColor(c.bg)
+    val stops = vividStops(text)
+    val bg: Brush = when {
+        f -> SolidColor(c.bg)
+        light -> vividBrush(text)
+        else -> SolidColor(stops[1].copy(alpha = 0.16f))
+    }
     Box(
         modifier.graphicsLayer { val k = s * pulse.scale; scaleX = k; scaleY = k }
-            .vividFocusGlow(f && light, shape)
+            .vividFocusGlow(f, shape, stops)
             .clip(shape)
             .background(bg)
-            .then(if (light && f) Modifier.border(2.dp, vividBrush(), shape) else Modifier)
+            .then(if (light && f) Modifier.border(2.dp, vividBrush(text), shape) else Modifier)
             .onFocusChanged { f = it.isFocused }
             .clickable(onClick = { pulse.pulse(); onClick() })
             .padding(horizontal = 24.dp, vertical = 12.dp),

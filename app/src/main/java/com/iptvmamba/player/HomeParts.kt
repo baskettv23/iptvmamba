@@ -199,20 +199,21 @@ fun HeroButton(text: String, icon: AIcon, primary: Boolean, modifier: Modifier =
     val pulse = rememberPulse()
     val s by animateFloatAsState(if (f) focusScale(1.06f) else 1f, label = "herobtn")
     val shape = RoundedCornerShape(50)
+    val stops = vividStops(text)
     val bg: Brush = when {
         f -> SolidColor(DS.FocusFill)
-        primary -> vividBrush()
-        else -> SolidColor(Accent1.copy(alpha = 0.16f))
+        primary -> vividBrush(text)
+        else -> SolidColor(stops[1].copy(alpha = 0.18f))
     }
-    val bd = if (f) DS.FocusFill else if (primary) Color.Transparent else Accent1.copy(alpha = 0.55f)
+    val bd = if (f) DS.FocusFill else if (primary) Color.Transparent else stops[1].copy(alpha = 0.7f)
     val ink = if (f) DS.FocusInk else Color.White
-    val iconInk = if (f) DS.FocusInk else if (primary) Color.White else Accent2
+    val iconInk = if (f) DS.FocusInk else if (primary) Color.White else lerp(stops[2], Color.White, 0.45f)
     Row(
         modifier.graphicsLayer { val k = s * pulse.scale; scaleX = k; scaleY = k }
-            .vividFocusGlow(f && primary, shape)
+            .vividFocusGlow(f, shape, stops)
             .height(dpx(h)).clip(shape)
             .background(bg)
-            .border(if (f && primary) 2.dp else 1.dp, if (f && primary) vividBrush() else SolidColor(bd), shape)
+            .border(if (f) 2.dp else 1.dp, if (f) vividBrush(text) else SolidColor(bd), shape)
             .onFocusChanged { f = it.isFocused }
             .trackFocus()
             .clickable(onClick = { pulse.pulse(); onClick() })

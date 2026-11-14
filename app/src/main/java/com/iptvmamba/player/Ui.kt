@@ -169,18 +169,43 @@ fun Modifier.focusGlow(focused: Boolean, shape: androidx.compose.ui.graphics.Sha
     if (!focused) this else this.shadow(10.dp, shape, clip = false, ambientColor = Tok.Lift, spotColor = Tok.Lift)
 
 /**
- * Vivid multicolor gradient for the highlighted main buttons ("Abspielen").
- * The stops are saturated but mid-dark, so white labels keep a contrast of at least 4.5:1.
+ * One gradient per button label so the row does not look like a single repeated pill.
+ * All stops are saturated 700/800 tones: white labels keep a contrast of at least 4.5:1.
  */
-val VividStops = listOf(Color(0xFF6D28D9), Color(0xFFBE185D), Color(0xFFC2410C), Color(0xFF0F766E))
+private val VividPalettes = listOf(
+    listOf(Color(0xFF065F46), Color(0xFF047857), Color(0xFF0F766E)), // play/resume: emerald
+    listOf(Color(0xFF1E40AF), Color(0xFF1D4ED8), Color(0xFF0E7490)), // streams: blue
+    listOf(Color(0xFF6D28D9), Color(0xFF7E22CE), Color(0xFFA21CAF)), // list: violet
+    listOf(Color(0xFF9F1239), Color(0xFFBE185D), Color(0xFFBE123C)), // favourite: rose
+    listOf(Color(0xFF9A3412), Color(0xFFC2410C), Color(0xFFB45309)), // trailer: orange
+    listOf(Color(0xFF0F766E), Color(0xFF0E7490), Color(0xFF0369A1)), // seen/external: ocean
+    listOf(Color(0xFF3730A3), Color(0xFF4338CA), Color(0xFF4C1D95)), // from start/again: indigo
+    listOf(Color(0xFF6B21A8), Color(0xFF9D174D), Color(0xFFA21CAF))  // other: magenta
+)
 
-fun vividBrush(): Brush = Brush.linearGradient(VividStops)
+/** Stable palette for a label: the play button stays green, every other button gets its own hue. */
+fun vividStops(key: String?): List<Color> {
+    val k = key.orEmpty()
+    val i = when {
+        k.contains("Abspielen") || k.contains("Fortsetzen") || k.contains("Weiter") || k.contains("ansehen") -> 0
+        k.contains("Von vorn") || k.contains("Erneut") -> 6
+        k.contains("Stream") -> 1
+        k.contains("Liste") -> 2
+        k.contains("Favorit") -> 3
+        k.contains("Trailer") -> 4
+        k.contains("Extern") || k.contains("gesehen") || k.contains("Gesehen") -> 5
+        else -> (k.fold(0) { a, c -> a * 31 + c.code } and Int.MAX_VALUE) % VividPalettes.size
+    }
+    return VividPalettes[i]
+}
 
-/** Colored halo under a focused main button (Android 9+; older versions draw the normal dark shadow). */
-fun Modifier.vividFocusGlow(focused: Boolean, shape: Shape): Modifier =
+fun vividBrush(key: String? = null): Brush = Brush.linearGradient(vividStops(key))
+
+/** Colored halo under a focused button (Android 9+; older versions draw the normal dark shadow). */
+fun Modifier.vividFocusGlow(focused: Boolean, shape: Shape, stops: List<Color> = VividPalettes[0]): Modifier =
     if (!focused) this else this.shadow(
         16.dp, shape, clip = false,
-        ambientColor = Color(0xFF6D28D9), spotColor = Color(0xFFBE185D)
+        ambientColor = stops[0], spotColor = stops[2]
     )
 
 /**
