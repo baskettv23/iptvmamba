@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -61,10 +62,13 @@ fun PillButton(text: String, modifier: Modifier = Modifier, light: Boolean = fal
     val s by animateFloatAsState(if (f) focusScale(1.07f) else 1f, label = "pill")
     val shape = RoundedCornerShape(50)
     val c = buttonColors(f, primary = light)
+    val bg: Brush = if (light && !f) vividBrush() else SolidColor(c.bg)
     Box(
         modifier.graphicsLayer { val k = s * pulse.scale; scaleX = k; scaleY = k }
+            .vividFocusGlow(f && light, shape)
             .clip(shape)
-            .background(c.bg)
+            .background(bg)
+            .then(if (light && f) Modifier.border(2.dp, vividBrush(), shape) else Modifier)
             .onFocusChanged { f = it.isFocused }
             .clickable(onClick = { pulse.pulse(); onClick() })
             .padding(horizontal = 24.dp, vertical = 12.dp),

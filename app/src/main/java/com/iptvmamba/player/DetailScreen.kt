@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -135,6 +136,8 @@ private fun DetailScreenFull(
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+    // Netflix-style hero: on TVs the floating poster sits next to the text (not in the sidebar preview).
+    val wide = !embedded && LocalConfiguration.current.screenWidthDp >= 960
     var heroFocused by remember { mutableStateOf(false) }
     LaunchedEffect(heroFocused) {
         if (heroFocused) repeat(4) { delay(70); listState.scrollToItem(0) }
@@ -437,7 +440,14 @@ private fun DetailScreenFull(
                         }
                         .onFocusChanged { heroFocused = it.hasFocus }
                 ) {
-                    Column(Modifier.align(if (embedded && !showActions) Alignment.TopStart else Alignment.BottomStart).widthIn(max = dpx(980)).padding(bottom = dpx(18)), verticalArrangement = Arrangement.spacedBy(dpx(12))) {
+                    Row(
+                        Modifier.align(if (embedded && !showActions) Alignment.TopStart else Alignment.BottomStart)
+                            .widthIn(max = dpx(1320)).padding(bottom = dpx(18)),
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(dpx(30))
+                    ) {
+                        if (wide) HeroPoster(meta?.poster)
+                        Column(Modifier.widthIn(max = dpx(980)), verticalArrangement = Arrangement.spacedBy(dpx(12))) {
                         // Round 17b: overline with glow bar, huge title (design "Cinematic Remake", picture 2)
                         Row(horizontalArrangement = Arrangement.spacedBy(dpx(14)), verticalAlignment = Alignment.CenterVertically) {
                             Kicker(kindLabel(item.kind), raw = false)
@@ -611,6 +621,7 @@ private fun DetailScreenFull(
                                 Text("Regie", color = Muted, fontSize = 14.sp)
                                 ds.take(3).forEach { d -> DetailPill(d.name) { onPerson(PersonRef(d.id, d.name, d.photo, item.id)) } }
                             }
+                        }
                         }
                         }
                     }
@@ -816,5 +827,25 @@ private fun SeasonEntry(season: Int, count: Int, selected: Boolean, modifier: Mo
             Text("Staffel $season", color = if (selected || f) Tok.TextHi else Tok.TextLow, fontSize = spx(26), fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
             if (selected) Text(text = if (count == 1) "1 Folge" else "$count Folgen", color = Muted, fontSize = spx(15))
         }
+    }
+}
+
+/**
+ * Floating 2:3 cover next to the hero text (Netflix style). Purely decorative: not focusable,
+ * so the remote control still lands on the play buttons first.
+ */
+@Composable
+private fun HeroPoster(url: String?) {
+    if (url.isNullOrBlank()) return
+    val shape = RoundedCornerShape(dpx(18))
+    Box(
+        Modifier.width(dpx(210)).aspectRatio(2f / 3f)
+            .shadow(18.dp, shape, clip = false, ambientColor = Color(0x66000000), spotColor = Color(0x99000000))
+            .clip(shape)
+            .background(Color(0x22000000))
+            .border(1.dp, Color(0x40FFFFFF), shape)
+    ) {
+        AsyncImage(url, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.7f to Color.Transparent, 1f to Color(0x59000000))))
     }
 }

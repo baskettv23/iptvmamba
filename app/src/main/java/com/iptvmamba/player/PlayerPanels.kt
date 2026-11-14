@@ -1,5 +1,6 @@
 package com.iptvmamba.player
 
+import android.content.Context
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
@@ -13,11 +14,16 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import java.io.File
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -51,7 +57,8 @@ fun PChoiceList(options: List<String>, selected: Int, focus: FocusRequester, onP
 fun BoxScope.TracksPanel(
     player: Player, ver: Int, onChanged: () -> Unit,
     audioFocus: FocusRequester, subsFocus: FocusRequester,
-    onClose: () -> Unit, onStyle: () -> Unit
+    onClose: () -> Unit, onStyle: () -> Unit,
+    onSearch: (() -> Unit)? = null
 ) {
     val audio = remember(ver) { collectTracks(player, C.TRACK_TYPE_AUDIO) }
     val subs = remember(ver) { collectTracks(player, C.TRACK_TYPE_TEXT) }
@@ -138,6 +145,17 @@ fun BoxScope.TracksPanel(
             }
         }
         Spacer(Modifier.height(12.dp))
+        if (onSearch != null) {
+            PPanelRow(
+                "Untertitel online suchen", false,
+                Modifier.onPreviewKeyEvent { e ->
+                    if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionLeft) { onClose(); true }
+                    else if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionRight) { onSearch(); true }
+                    else false
+                },
+                chevron = true, tinted = true, onClick = onSearch
+            )
+        }
         PPanelRow(
             "Aussehen der Untertitel", false,
             Modifier.onPreviewKeyEvent { e ->
@@ -147,6 +165,93 @@ fun BoxScope.TracksPanel(
             },
             chevron = true, tinted = true, onClick = onStyle
         )
+    }
+}
+
+@Composable
+fun BoxScope.SubtitleSearchPanel(
+    ctx: Context, title: String, tmdbId: Int, season: Int, episode: Int,
+    onClose: () -> Unit, onPick: (File, String, String) -> Unit
+) {
+    var lang by remember { mutableStateOf(TrackLogic.norm(AppSettings.subLangEffective()) ?: "de") }
+    var results by remember { mutableStateOf<List<SubResult>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var searchError by remember { mutableStateOf<String?>(null) }
+    var pickError by remember { mutableStateOf<String?>(null) }
+    var downloading by remember { mutableStateOf(false) }
+    var tick by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
+    val langFocus = remember { FocusRequester() }
+    val listFocus = remember { FocusRequester() }
+    val query = SubQuery(title, tmdbId, season, episode, lang)
+
+    LaunchedEffect(lang, tick) {
+        loading = true
+        searchError = null
+        pickError = null
+        results = emptyList()
+        runCatching { Subtitles.search(ctx, query) }
+            .onSuccess { results = it }
+            .onFailure { searchError = it.message ?: "Suche fehlgeschlagen" }
+        loading = false
+    }
+    LaunchedEffect(loading, results.size) {
+        if (!loading) {
+            delay(120)
+            runCatching { (if (results.isNotEmpty()) listFocus else langFocus).requestFocus() }
+        }
+    }
+
+    PSimplePanel(720.dp, "Untertitel suchen", "Links schließt das Menü  ·  OK lädt den Untertitel", onClose) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PT.RowGap)) {
+            PPanelRow(
+                "Sprache", false, Modifier.focusRequester(langFocus),
+                trailing = Subtitles.langName(lang), chevron = true
+            ) { lang = Subtitles.nextLang(lang) }
+            PPanelRow(
+                "Erneut suchen", false,
+                trailing = if (loading) "Suche …" else null, chevron = true
+            ) { tick++ }
+            pickError?.let { Text(it, color = DS.Danger, fontSize = 14.sp, modifier = Modifier.padding(16.dp)) }
+            when {
+                loading -> Text(
+                    "Suche bei OpenSubtitles, SubDL und SubtitleCat …",
+                    color = Muted, fontSize = 14.sp, modifier = Modifier.padding(16.dp)
+                )
+                searchError != null -> Text(
+                    searchError.orEmpty(), color = DS.Danger, fontSize = 14.sp, modifier = Modifier.padding(16.dp)
+                )
+                results.isEmpty() -> Text(
+                    "Keine Untertitel gefunden. Andere Sprache wählen oder erneut suchen.",
+                    color = Muted, fontSize = 14.sp, modifier = Modifier.padding(16.dp)
+                )
+                else -> LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PT.RowGap)) {
+                    itemsIndexed(results) { i, r ->
+                        PPanelRow(
+                            r.release.ifBlank { r.provider }, false,
+                            if (i == 0) Modifier.focusRequester(listFocus) else Modifier,
+                            trailing = r.provider + (if (r.downloads > 0) " · " + r.downloads else "")
+                        ) {
+                            if (downloading) return@PPanelRow
+                            downloading = true
+                            pickError = null
+                            scope.launch {
+                                runCatching { Subtitles.download(ctx, r, query) }
+                                    .onSuccess { f ->
+                                        onPick(f, r.lang.ifBlank { lang }, r.release.ifBlank { r.provider })
+                                        onClose()
+                                    }
+                                    .onFailure { pickError = it.message ?: "Download fehlgeschlagen" }
+                                downloading = false
+                            }
+                        }
+                    }
+                }
+            }
+            if (downloading) Text(
+                "Untertitel wird geladen …", color = Accent2, fontSize = 14.sp, modifier = Modifier.padding(16.dp)
+            )
+        }
     }
 }
 

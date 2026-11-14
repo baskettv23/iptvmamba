@@ -36,8 +36,8 @@ android {
         minSdk = 24
         targetSdk = 37
         // Raise both for every release; the GitHub release tag must match versionName (e.g. tag "v1.1").
-        versionCode = 8
-        versionName = "1.6"
+        versionCode = 9
+        versionName = "1.7"
         // Name unter dem Symbol; der Debug-Build überschreibt ihn (siehe buildTypes)
         manifestPlaceholders["appLabel"] = "iptvmamba"
 
@@ -45,6 +45,8 @@ android {
         buildConfigField("String", "OMDB_KEY", "\"${secret("OMDB_KEY")}\"")
         buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${secretId("GOOGLE_CLIENT_ID")}\"")
         buildConfigField("String", "GOOGLE_CLIENT_SECRET", "\"${secretId("GOOGLE_CLIENT_SECRET")}\"")
+        buildConfigField("String", "TRAKT_CLIENT_ID", "\"${secretId("TRAKT_CLIENT_ID")}\"")
+        buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"${secretId("TRAKT_CLIENT_SECRET")}\"")
     }
 
     signingConfigs {

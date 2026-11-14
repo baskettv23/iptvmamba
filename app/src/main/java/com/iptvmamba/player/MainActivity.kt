@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
         HomeLayout.init(this); BoomerLayout.init(this)
         SidebarPrefs.init(this)
         Config.init(this)
+        Trakt.init(this)
         // Android 16/17: ohne diese Laufzeit-Berechtigung erreicht das Handy den QR-Server nicht.
         if (LocalNet.needed() && !LocalNet.granted(this) && !LocalNet.asked(this)) {
             LocalNet.markAsked(this)

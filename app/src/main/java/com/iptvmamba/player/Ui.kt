@@ -169,6 +169,21 @@ fun Modifier.focusGlow(focused: Boolean, shape: androidx.compose.ui.graphics.Sha
     if (!focused) this else this.shadow(10.dp, shape, clip = false, ambientColor = Tok.Lift, spotColor = Tok.Lift)
 
 /**
+ * Vivid multicolor gradient for the highlighted main buttons ("Abspielen").
+ * The stops are saturated but mid-dark, so white labels keep a contrast of at least 4.5:1.
+ */
+val VividStops = listOf(Color(0xFF6D28D9), Color(0xFFBE185D), Color(0xFFC2410C), Color(0xFF0F766E))
+
+fun vividBrush(): Brush = Brush.linearGradient(VividStops)
+
+/** Colored halo under a focused main button (Android 9+; older versions draw the normal dark shadow). */
+fun Modifier.vividFocusGlow(focused: Boolean, shape: Shape): Modifier =
+    if (!focused) this else this.shadow(
+        16.dp, shape, clip = false,
+        ambientColor = Color(0xFF6D28D9), spotColor = Color(0xFFBE185D)
+    )
+
+/**
  * Cinematic glass panel: a subtle vertical gradient, a hairline edge and, for dialogs, a soft drop shadow.
  * Use [elevated] = false for large panels that sit inside a settings page.
  */

@@ -57,6 +57,7 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
     var user by remember { mutableStateOf(pendX?.second ?: "") }
     var pass by remember { mutableStateOf(pendX?.third ?: "") }
     var showPass by remember { mutableStateOf(false) }
+    var telegram by remember { mutableStateOf(false) }
     // Send from the phone: local mini server as long as this screen is open
     val ip = remember { PhoneImport.localIp() }
     val receiver = remember {
@@ -204,6 +205,7 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
                         try { pickFile.launch(arrayOf("*/*")) }
                         catch (e: Exception) { PlaylistStore.error = "Auf diesem Gerät gibt es keine Dateiauswahl. Lade die Datei über die Handy-Seite rechts hoch." }
                     }
+                    FocusButton("Listen in Telegram suchen", compact = true) { telegram = true }
                 }
             } else {
                 Field(host, { host = it }, "Server (z. B. http://server.tld:8080)")
@@ -246,6 +248,7 @@ fun AddPlaylistScreen(onDone: () -> Unit) {
         )
     }
     }
+    if (telegram) TelegramListDialog { telegram = false }
 }
 
 /** Scrolls to a focused element at once (no animation, small margin) instead of the app-wide soft scrolling. */

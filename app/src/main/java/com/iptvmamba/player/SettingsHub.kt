@@ -24,10 +24,14 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
@@ -1268,10 +1272,21 @@ private fun ApiKeysPage(ctx: Context) {
     var rd by remember { mutableStateOf(Config.ownRd(ctx)) }
     var tb by remember { mutableStateOf(Config.ownTb(ctx)) }
     var addon by remember { mutableStateOf(Config.ownAddon(ctx)) }
+    var os by remember { mutableStateOf(Config.ownOs(ctx)) }
+    var sd by remember { mutableStateOf(Config.ownSd(ctx)) }
+    var traktId by remember { mutableStateOf(Config.ownTraktId(ctx)) }
+    var traktSecret by remember { mutableStateOf(Config.ownTraktSecret(ctx)) }
+    var traktDevice by remember { mutableStateOf<TraktDevice?>(null) }
+    var traktMsg by remember { mutableStateOf("") }
+    var traktBusy by remember { mutableStateOf(false) }
+    var traktJob by remember { mutableStateOf<Job?>(null) }
+    var traktConnected by remember { mutableStateOf(Trakt.connected) }
     var tmdbStatus by remember { mutableStateOf("") }
     var omdbStatus by remember { mutableStateOf("") }
     var rdStatus by remember { mutableStateOf("") }
     var tbStatus by remember { mutableStateOf("") }
+    var osStatus by remember { mutableStateOf("") }
+    var sdStatus by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     Hint("Die App enthält keine eigenen Schlüssel. Mit deinen eigenen, kostenlosen Schlüsseln zeigt sie Poster, Beschreibungen, Besetzung, Trailer, automatische Genres sowie IMDb- und Rotten-Tomatoes-Wertungen. Ohne Schlüssel übernimmt sie Beschreibung, Cover und Bewertung von deinem Anbieter (bei Xtream-Zugängen).")
 
@@ -1299,6 +1314,55 @@ private fun ApiKeysPage(ctx: Context) {
     Hint("Kostenlos unter omdbapi.com > API Key (FREE). Danach den Aktivierungslink in der E-Mail anklicken, sonst funktioniert der Schlüssel nicht. Geht auch ohne TMDB-Schlüssel.")
     if (omdbStatus.isNotBlank()) Text(omdbStatus, color = if (omdbStatus == "Schlüssel gültig") Accent2 else Muted, fontSize = 16.sp)
 
+    SectionTitle("OpenSubtitles.com (Untertitel)")
+    Field(os, { os = it; osStatus = "" }, "OpenSubtitles.com API-Schlüssel")
+    Hint("Optional. Kostenlos unter opensubtitles.com: Konto anlegen, dann im Profil den API-Schlüssel erzeugen. Ohne Schlüssel sucht die App weiter über SubtitleCat und SubDL.")
+    if (osStatus.isNotBlank()) Text(osStatus, color = if (osStatus == "Schlüssel gültig") Accent2 else Muted, fontSize = 16.sp)
+
+    SectionTitle("SubDL (Untertitel)")
+    Field(sd, { sd = it; sdStatus = "" }, "SubDL API-Schlüssel")
+    Hint("Optional. Kostenlos unter subdl.com/panel/api. SubDL liefert Untertitel als Archiv; die App entpackt die passende Datei automatisch.")
+    if (sdStatus.isNotBlank()) Text(sdStatus, color = if (sdStatus == "Schlüssel gültig") Accent2 else Muted, fontSize = 16.sp)
+
+    SectionTitle("Trakt (Scrobbling)")
+    Hint("Optional. Trakt merkt sich, was du gesehen hast, und synchronisiert es mit deinem Konto. Dafür brauchst du eine eigene Trakt-API-App: trakt.tv/oauth/applications > Neue App, Redirect-URI urn:ietf:wg:oauth:2.0:oob. Danach Client-ID und Client-Secret hier eintragen und verbinden.")
+    Field(traktId, { traktId = it; traktMsg = "" }, "Trakt Client-ID")
+    Field(traktSecret, { traktSecret = it; traktMsg = "" }, "Trakt Client-Secret")
+    if (traktConnected || Trakt.connected) {
+        Text(
+            "Verbunden" + (Trakt.username.takeIf { it.isNotBlank() }?.let { " als $it" } ?: ""),
+            color = Accent2, fontSize = 16.sp
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ConfirmPill("Trakt trennen") {
+                Trakt.logout(ctx); traktConnected = false; traktMsg = ""
+            }
+        }
+    } else {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PillButton(if (traktBusy) "Bitte warten …" else "Mit Trakt verbinden", light = true, icon = AIcon.Check) {
+                if (traktBusy) return@PillButton
+                traktBusy = true; traktMsg = ""
+                Config.saveTrakt(ctx, traktId, traktSecret)
+                traktId = Config.ownTraktId(ctx); traktSecret = Config.ownTraktSecret(ctx)
+                traktJob = scope.launch {
+                    Trakt.requestDevice(ctx)
+                        .onSuccess { d ->
+                            traktDevice = d
+                            val ok = Trakt.awaitDevice(ctx, d) { traktMsg = it }
+                            if (ok) { traktConnected = true; traktDevice = null }
+                            traktBusy = false
+                        }
+                        .onFailure {
+                            traktMsg = it.message ?: "Verbindung fehlgeschlagen"
+                            traktBusy = false
+                        }
+                }
+            }
+        }
+    }
+    if (traktMsg.isNotBlank()) Text(traktMsg, color = if (traktConnected) Accent2 else Muted, fontSize = 16.sp)
+
     Hint("Die Schlüssel bleiben nur auf diesem Gerät. Nach dem Eintragen die App einmal neu starten, damit alle Bereiche die Infos laden. Intro- und Abspann-Zeiten kommen von TheIntroDB und brauchen keinen Schlüssel.")
     // Buttons last: text below the last focusable element was cut off at the bottom of the page
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1309,20 +1373,54 @@ private fun ApiKeysPage(ctx: Context) {
             Config.saveRd(ctx, rd)
             Config.saveTb(ctx, tb)
             Config.saveAddon(ctx, addon)
+            Config.saveOs(ctx, os)
+            Config.saveSd(ctx, sd)
             tmdb = Config.ownTmdb(ctx); omdb = Config.ownOmdb(ctx); rd = Config.ownRd(ctx)
-            tb = Config.ownTb(ctx); addon = Config.ownAddon(ctx)
+            tb = Config.ownTb(ctx); addon = Config.ownAddon(ctx); os = Config.ownOs(ctx); sd = Config.ownSd(ctx)
             scope.launch {
                 tmdbStatus = if (tmdb.isEmpty()) "" else KeyCheck.tmdb(tmdb) ?: "Schlüssel gültig"
                 omdbStatus = if (omdb.isEmpty()) "" else KeyCheck.omdb(omdb) ?: "Schlüssel gültig"
                 rdStatus = if (rd.isEmpty()) "" else RealDebrid.check(rd) ?: "Token gültig"
                 tbStatus = if (tb.isEmpty()) "" else TorBox.check(tb) ?: "Token gültig"
+                osStatus = if (os.isEmpty()) "" else KeyCheck.openSubtitles(os) ?: "Schlüssel gültig"
+                sdStatus = if (sd.isEmpty()) "" else KeyCheck.subdl(sd) ?: "Schlüssel gültig"
                 busy = false
             }
         }
-        if (tmdb.isNotEmpty() || omdb.isNotEmpty() || rd.isNotEmpty() || tb.isNotEmpty() || addon.isNotEmpty()) ConfirmPill("Schlüssel entfernen") {
-            tmdb = ""; omdb = ""; rd = ""; tb = ""; addon = ""
-            tmdbStatus = ""; omdbStatus = ""; rdStatus = ""; tbStatus = ""
+        if (tmdb.isNotEmpty() || omdb.isNotEmpty() || rd.isNotEmpty() || tb.isNotEmpty() || addon.isNotEmpty() || os.isNotEmpty() || sd.isNotEmpty()) ConfirmPill("Schlüssel entfernen") {
+            tmdb = ""; omdb = ""; rd = ""; tb = ""; addon = ""; os = ""; sd = ""
+            tmdbStatus = ""; omdbStatus = ""; rdStatus = ""; tbStatus = ""; osStatus = ""; sdStatus = ""
             Config.save(ctx, "", ""); Config.saveRd(ctx, ""); Config.saveTb(ctx, ""); Config.saveAddon(ctx, "")
+            Config.saveOs(ctx, ""); Config.saveSd(ctx, "")
+        }
+    }
+
+    traktDevice?.let { d ->
+        val closeReq = remember { FocusRequester() }
+        LaunchedEffect(Unit) { runCatching { closeReq.requestFocus() } }
+        Dialog(
+            onDismissRequest = {
+                traktJob?.cancel(); traktDevice = null; traktBusy = false; traktMsg = "Abgebrochen"
+            },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            GlassSurface(Modifier.widthIn(max = dpx(760)).padding(dpx(24))) {
+                Column(
+                    Modifier.padding(dpx(34)),
+                    verticalArrangement = Arrangement.spacedBy(dpx(14)),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Trakt verbinden", color = Color.White, fontSize = spx(30), fontWeight = FontWeight.ExtraBold)
+                    Text("Öffne auf dem Handy oder PC:", color = Tok.TextLow, fontSize = spx(17))
+                    Text(d.url, color = Accent2, fontSize = spx(20), fontWeight = FontWeight.SemiBold)
+                    Text("und gib diesen Code ein:", color = Tok.TextLow, fontSize = spx(17))
+                    Text(d.userCode, color = Color.White, fontSize = 64.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 10.sp)
+                    Text(traktMsg.ifBlank { "Warte auf Bestätigung …" }, color = Tok.TextMid, fontSize = spx(16), textAlign = TextAlign.Center)
+                    PillButton("Schließen", light = true, modifier = Modifier.focusRequester(closeReq)) {
+                        traktJob?.cancel(); traktDevice = null; traktBusy = false
+                    }
+                }
+            }
         }
     }
 }

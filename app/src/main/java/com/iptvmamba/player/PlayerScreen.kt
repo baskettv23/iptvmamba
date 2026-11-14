@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.net.ConnectivityManager
 import android.net.Network
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import androidx.activity.ComponentActivity
@@ -114,7 +115,7 @@ private fun digitOf(k: Key): Int = when (k) {
 
 private val SLEEP_MIN = listOf(0, 15, 30, 45, 60, 90, 120)
 
-private enum class Panel { NONE, TRACKS, SUBSTYLE, QUALITY, SPEED, ASPECT, MENU, STEP, EPISODES, SLEEP, ARCHIVE, CLOCK }
+private enum class Panel { NONE, TRACKS, SUBSTYLE, SUBSEARCH, QUALITY, SPEED, ASPECT, MENU, STEP, EPISODES, SLEEP, ARCHIVE, CLOCK }
 
 private class Flash(val icon: PIcon?, val text: String?)
 
@@ -535,6 +536,39 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
         player.trackSelectionParameters = p.build()
     }
 
+    fun applyExternalSubtitle(file: java.io.File, lang: String, label: String) {
+        if (cur.live || cur.archive != null) return
+        val at = player.currentPosition.takeIf { it > 0 } ?: cur.startMs
+        val wasPlaying = player.playWhenReady
+        val sub = MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(file))
+            .setMimeType(Subtitles.mime(file))
+            .setLanguage(lang)
+            .setLabel(label)
+            .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+            .build()
+        val item = MediaItem.Builder()
+            .setUri(resolvedUrl.ifEmpty { cur.url })
+            .setSubtitleConfigurations(listOf(sub))
+            .build()
+        runCatching {
+            player.setMediaItem(item, at)
+            player.prepare()
+            player.playWhenReady = wasPlaying
+            buffering = true
+            tracksVer++
+            h.postDelayed({
+                val g = player.currentTracks.groups.lastOrNull { it.type == C.TRACK_TYPE_TEXT }
+                if (g != null) {
+                    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                        .setOverrideForType(TrackSelectionOverride(g.mediaTrackGroup, 0)).build()
+                    tracksVer++
+                }
+            }, 900)
+            notice = "Untertitel geladen: " + label
+        }.onFailure { msg = "Untertitel konnte nicht geladen werden" }
+    }
+
     fun saveProgress() {
         if (cur.live || cur.archive != null) return
         // Duration unknown (some provider streams report none): remember the position anyway, otherwise "Continue watching" would stay on the old episode
@@ -561,8 +595,13 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
         WatchStore.save(ctx, Entry(cur.itemId, cur.title, cur.url, p, d, now, cur.season, cur.episode), next)
     }
 
+    /** Current playback position as percent of the duration (0..100) for Trakt. */
+    fun traktPct(): Float =
+        if (player.duration > 0) (player.currentPosition * 100f / player.duration).coerceIn(0f, 100f) else 0f
+
     fun playEpisode(ep: Episode) {
         val si = seriesItem ?: return
+        if (!cur.live) Trakt.stop(ctx, cur, traktPct())
         saveProgress()
         val saved = VariantPref.get(ctx, si.id)
         val v = pickVariant(ep, saved.first, saved.second, saved.third, PlaybackPrefs.cap(ctx))
@@ -749,13 +788,19 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                         liveEnds++
                         msg = "Stream beendet – verbinde neu …"
                         h.postDelayed({ LiveTimeshift.reconnect(player) }, 800L)
-                    } else onEnded()
+                    } else {
+                        if (!cur.live && cur.archive == null) Trakt.stop(ctx, cur, 100f)
+                        onEnded()
+                    }
                 }
             }
             override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
                 if (reason == Player.DISCONTINUITY_REASON_SEEK || reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) lastSeekT = System.currentTimeMillis()
             }
-            override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                playing = isPlaying
+                if (!cur.live && cur.archive == null) Trakt.onPlaying(ctx, cur, isPlaying, traktPct())
+            }
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { pWhenReady = playWhenReady }
             override fun onTracksChanged(tracks: Tracks) {
                 tracksVer++
@@ -776,6 +821,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             if (RemoteHub.player === player) RemoteHub.player = null
             // Detail page remembers the last played episode (also after "Next episode")
             if (!cur.live && cur.archive == null) DetailReturn.set(cur.itemId, cur.season, cur.episode)
+            if (!cur.live && cur.archive == null) Trakt.stop(ctx, cur, traktPct())
             saveProgress()
             h.removeCallbacksAndMessages(null)
             player.removeListener(l)
@@ -1585,7 +1631,13 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
             when (panel) {
                 Panel.TRACKS -> TracksPanel(
                     player, tracksVer, { tracksVer++; h.postDelayed({ rememberTracks() }, 400) }, panelFocus, subsFocus,
-                    { closePanel() }, { openPanel(Panel.SUBSTYLE, Panel.TRACKS) }
+                    { closePanel() }, { openPanel(Panel.SUBSTYLE, Panel.TRACKS) },
+                    if (!cur.live && cur.archive == null) ({ openPanel(Panel.SUBSEARCH, Panel.TRACKS) }) else null
+                )
+
+                Panel.SUBSEARCH -> SubtitleSearchPanel(
+                    ctx, cur.title, cur.tmdbId, cur.season, cur.episode,
+                    { closePanel() }, { file, lang, label -> applyExternalSubtitle(file, lang, label) }
                 )
 
                 Panel.SUBSTYLE -> PSimplePanel(440.dp, "Untertitel-Stil", back, { closePanel() }) {
@@ -1732,6 +1784,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                         }
                         add(MenuEntry(0, "Sprungweite", "${step / 1000} s", true))
                         add(MenuEntry(1, "Untertitel-Stil", null, true))
+                        if (!cur.live && cur.archive == null) add(MenuEntry(12, "Untertitel suchen", null, true))
                         add(MenuEntry(2, "Videoqualität", currentAlts().size.takeIf { it > 1 }?.let { "$it Quellen" }, true))
                         add(MenuEntry(3, "Wiedergabe-Tempo", speedLabel(SPEEDS[speedIdx]), true))
                         add(MenuEntry(4, "Bildformat", ASPECTS[aspect].substringBefore(" ("), true))
@@ -1756,6 +1809,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                                 when (e.id) {
                                     0 -> openPanel(Panel.STEP, Panel.MENU)
                                     1 -> openPanel(Panel.SUBSTYLE, Panel.MENU)
+                                    12 -> openPanel(Panel.SUBSEARCH, Panel.MENU)
                                     2 -> openPanel(Panel.QUALITY, Panel.MENU)
                                     3 -> openPanel(Panel.SPEED, Panel.MENU)
                                     4 -> openPanel(Panel.ASPECT, Panel.MENU)
