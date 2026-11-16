@@ -1,9 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- iptvmamba app icon background (dark navy) -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#070C1F" android:pathData="M0,0h108v108h-108z" />
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="10" android:startY="8" android:endX="98" android:endY="100">
+                <item android:offset="0" android:color="#FF050816" />
+                <item android:offset="0.55" android:color="#FF0A1430" />
+                <item android:offset="1" android:color="#FF12092A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#3300F0FF" android:pathData="M0,74 C24,62 52,86 108,66 L108,108 L0,108 Z" />
+    <path android:fillColor="#22FF2BD6" android:pathData="M0,28 C30,40 60,14 108,34 L108,0 L0,0 Z" />
 </vector>

@@ -1,5 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- iptvmamba-Logo (Bild ic_logo_fg.png) für das adaptive App-Symbol -->
-<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
-    android:src="@drawable/ic_logo_fg"
-    android:gravity="fill" />
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M18,78 L18,30 L32,30 L45,50 L58,30 L72,30 L72,78 L60,78 L60,49 L45,72 L30,49 L30,78 Z"
+        android:strokeWidth="2.2" android:strokeLineJoin="round">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="18" android:startY="30" android:endX="72" android:endY="78">
+                <item android:offset="0" android:color="#FF00F0FF" />
+                <item android:offset="0.5" android:color="#FF3D7BFF" />
+                <item android:offset="1" android:color="#FFFF2BD6" />
+            </gradient>
+        </aapt:attr>
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="linear" android:startX="18" android:startY="30" android:endX="72" android:endY="78">
+                <item android:offset="0" android:color="#CCFFFFFF" />
+                <item android:offset="1" android:color="#66FFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.92" android:pathData="M75,40 L75,68 L95,54 Z" />
+    <path android:fillColor="#00000000" android:strokeColor="#9900F0FF" android:strokeWidth="1.4"
+        android:pathData="M75,40 L75,68 L95,54 Z" />
+</vector>

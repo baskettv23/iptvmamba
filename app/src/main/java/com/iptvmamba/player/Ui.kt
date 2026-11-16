@@ -169,28 +169,27 @@ fun Modifier.focusGlow(focused: Boolean, shape: androidx.compose.ui.graphics.Sha
     if (!focused) this else this.shadow(10.dp, shape, clip = false, ambientColor = Tok.Lift, spotColor = Tok.Lift)
 
 /**
- * One gradient per button label so the row does not look like a single repeated pill.
- * All stops are saturated 700/800 tones: white labels keep a contrast of at least 4.5:1.
+ * Neon palettes per button label for a vivid, distinct look.
  */
 private val VividPalettes = listOf(
-    listOf(Color(0xFF065F46), Color(0xFF047857), Color(0xFF0F766E)), // play/resume: emerald
-    listOf(Color(0xFF1E40AF), Color(0xFF1D4ED8), Color(0xFF0E7490)), // streams: blue
-    listOf(Color(0xFF6D28D9), Color(0xFF7E22CE), Color(0xFFA21CAF)), // list: violet
-    listOf(Color(0xFF9F1239), Color(0xFFBE185D), Color(0xFFBE123C)), // favourite: rose
-    listOf(Color(0xFF9A3412), Color(0xFFC2410C), Color(0xFFB45309)), // trailer: orange
-    listOf(Color(0xFF0F766E), Color(0xFF0E7490), Color(0xFF0369A1)), // seen/external: ocean
-    listOf(Color(0xFF3730A3), Color(0xFF4338CA), Color(0xFF4C1D95)), // from start/again: indigo
-    listOf(Color(0xFF6B21A8), Color(0xFF9D174D), Color(0xFFA21CAF))  // other: magenta
+    listOf(Color(0xFF00F0FF), Color(0xFF00B8FF), Color(0xFF0077FF)), // play/resume: cyan
+    listOf(Color(0xFF3D7BFF), Color(0xFF5A5CFF), Color(0xFF00C2FF)), // streams: electric blue
+    listOf(Color(0xFFB026FF), Color(0xFF7A5CFF), Color(0xFFFF2BD6)), // list: violet-magenta
+    listOf(Color(0xFFFF2BD6), Color(0xFFFF4FD8), Color(0xFFFF6A00)), // favourite: hot pink
+    listOf(Color(0xFFFF6A00), Color(0xFFFF9A00), Color(0xFFFFD300)), // trailer: neon amber
+    listOf(Color(0xFF00FF9C), Color(0xFF00E5FF), Color(0xFF00B8FF)), // seen/external: aqua-green
+    listOf(Color(0xFF7CFF00), Color(0xFF00F0FF), Color(0xFF00A3FF)), // from start/again: lime-cyan
+    listOf(Color(0xFFFF3D81), Color(0xFFB026FF), Color(0xFF5A5CFF))  // other: magenta-violet
 )
 
-/** Stable palette for a label: the play button stays green, every other button gets its own hue. */
+/** Stable palette for a label: the play button stays cyan, every other button gets its own neon hue. */
 fun vividStops(key: String?): List<Color> {
     val k = key.orEmpty()
     val i = when {
         k.contains("Abspielen") || k.contains("Fortsetzen") || k.contains("Weiter") || k.contains("ansehen") -> 0
         k.contains("Von vorn") || k.contains("Erneut") -> 6
         k.contains("Stream") -> 1
-        k.contains("Liste") -> 2
+        k.contains("Liste") || k.contains("List") -> 2
         k.contains("Favorit") -> 3
         k.contains("Trailer") -> 4
         k.contains("Extern") || k.contains("gesehen") || k.contains("Gesehen") -> 5
@@ -201,11 +200,11 @@ fun vividStops(key: String?): List<Color> {
 
 fun vividBrush(key: String? = null): Brush = Brush.linearGradient(vividStops(key))
 
-/** Colored halo under a focused button (Android 9+; older versions draw the normal dark shadow). */
+/** Strong neon halo under a focused button (Android 9+; older versions draw the normal dark shadow). */
 fun Modifier.vividFocusGlow(focused: Boolean, shape: Shape, stops: List<Color> = VividPalettes[0]): Modifier =
     if (!focused) this else this.shadow(
-        16.dp, shape, clip = false,
-        ambientColor = stops[0], spotColor = stops[2]
+        22.dp, shape, clip = false,
+        ambientColor = stops[0].copy(alpha = 0.95f), spotColor = stops[2].copy(alpha = 0.95f)
     )
 
 /**
