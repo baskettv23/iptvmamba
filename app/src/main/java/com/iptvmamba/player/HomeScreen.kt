@@ -694,22 +694,34 @@ fun HomeScreen(
                             item(key = "mltop") { header(Modifier) }
                             val wm = watchList.filter { it.kind == Kind.MOVIE }
                             val ws = watchList.filter { it.kind == Kind.SERIES }
-                            if (wm.isEmpty() && ws.isEmpty()) {
+                            val cols = CollectionsStore.list.toList()
+                            if (wm.isEmpty() && ws.isEmpty() && cols.isEmpty()) {
                                 item(key = "mlh") { RowTitle("Meine Liste", null, null, onAll = null) }
                                 item(key = "mle") {
                                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                        EmptyState(AIcon.Plus, "Noch nichts in deiner Liste", "Auf der Seite eines Films oder einer Serie „Meine Liste“ wählen.",
-                                            action = "Filme entdecken", actionModifier = Modifier.focusRequester(ContentFocus.req)) { onTab(1) }
+                                        EmptyState(AIcon.Plus, "Noch nichts in deiner Liste", "En un detalle, usa \"Colección\" para crear/añadir. También puedes usar \"Meine Liste\".",
+                                            action = "Descubrir películas", actionModifier = Modifier.focusRequester(ContentFocus.req)) { onTab(1) }
                                     }
                                 }
-                            }
-                            if (wm.isNotEmpty()) {
-                                item(key = "mlmh") { RowTitle("Meine Liste · Filme", null, null, onAll = null) }
-                                item(key = "mlm") { CardGridRows(wm, CARD_POSTER, ContentFocus.req, onOpen) }
-                            }
-                            if (ws.isNotEmpty()) {
-                                item(key = "mlsh") { RowTitle("Meine Liste · Serien", null, null, onAll = null) }
-                                item(key = "mls") { CardGridRows(ws, CARD_POSTER, if (wm.isEmpty()) ContentFocus.req else null, onOpen) }
+                            } else {
+                                if (wm.isNotEmpty()) {
+                                    item(key = "mlmh") { RowTitle("Meine Liste · Películas", null, null, onAll = null) }
+                                    item(key = "mlm") { CardGridRows(wm, CARD_POSTER, ContentFocus.req, onOpen) }
+                                }
+                                if (ws.isNotEmpty()) {
+                                    item(key = "mlsh") { RowTitle("Meine Liste · Series", null, null, onAll = null) }
+                                    item(key = "mls") { CardGridRows(ws, CARD_POSTER, if (wm.isEmpty()) ContentFocus.req else null, onOpen) }
+                                }
+                                cols.forEach { col ->
+                                    val items = col.ids.mapNotNull { byId[it] }
+                                    if (items.isNotEmpty()) {
+                                        item(key = "colh${col.id}") { RowTitle("Colección: ${col.name}", null, null, onAll = null) }
+                                        item(key = "col${col.id}") { CardGridRows(items, CARD_POSTER, null, onOpen) }
+                                    }
+                                }
+                                if (cols.any { it.ids.isEmpty() }) {
+                                    item(key = "colempty") { EmptyHint("Colecciones vacías: añádelas desde el detalle de una película o serie.") }
+                                }
                             }
                         }
                         MenuLogic.VERLAUF -> {

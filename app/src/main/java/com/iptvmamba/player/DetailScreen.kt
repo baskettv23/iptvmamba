@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -538,6 +539,10 @@ private fun DetailScreenFull(
                             }
                             // Watched by hand: movie, season, whole series (also reachable per episode: long OK / menu key on the row)
                             Row(horizontalArrangement = Arrangement.spacedBy(dpx(12))) {
+                                var showCollections by remember(item.id) { mutableStateOf(false) }
+                                val colCount = CollectionsStore.list.count { it.ids.contains(item.id) }
+                                HeroButton(if (colCount > 0) "Colecciones ($colCount)" else "Colección", AIcon.Plus, colCount > 0, Modifier, bh) { showCollections = true }
+                                if (showCollections) CollectionPickerDialog(ctx, item) { showCollections = false }
                                 // A finished resume point would otherwise keep offering "Continue"
                                 fun dropResume(keys: Collection<Long>) {
                                     if (resume == null) return
@@ -847,5 +852,57 @@ private fun HeroPoster(url: String?) {
     ) {
         AsyncImage(url, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.7f to Color.Transparent, 1f to Color(0x59000000))))
+    }
+}
+
+@Composable
+private fun CollectionPickerDialog(ctx: Context, item: Item, onDismiss: () -> Unit) {
+    var newName by remember { mutableStateOf("") }
+    val createFocus = remember { FocusRequester() }
+    BackHandler { onDismiss() }
+    LaunchedEffect(Unit) { delay(80); runCatching { createFocus.requestFocus() } }
+    Box(Modifier.fillMaxSize().background(Color(0xB3000000)).clickable(onClick = onDismiss), contentAlignment = Alignment.Center) {
+        Column(
+            Modifier.width(560.dp).clip(RoundedCornerShape(DS.RadiusL)).background(Surf)
+                .border(1.dp, DS.Overlay3, RoundedCornerShape(DS.RadiusL))
+                .clickable(enabled = false) {}
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text("Colecciones", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(item.title, color = Muted, fontSize = 15.sp, maxLines = 1)
+            if (CollectionsStore.list.isEmpty()) {
+                Text("Aún no hay colecciones. Crea una abajo.", color = Muted, fontSize = 16.sp)
+            } else {
+                LazyColumn(Modifier.heightIn(max = 320.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(CollectionsStore.list, key = { it.id }) { col ->
+                        val has = col.ids.contains(item.id)
+                        val rowFocus = remember { FocusRequester() }
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(DS.RadiusS))
+                                .background(if (has) Accent1.copy(alpha = 0.18f) else Color(0x22000000))
+                                .focusRequester(if (col == CollectionsStore.list.firstOrNull()) rowFocus else FocusRequester.Default)
+                                .focusable().clickable { CollectionsStore.toggle(ctx, col.id, item.id) }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(col.name, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+                            Text(if (has) "✓ En colección" else "Añadir", color = if (has) Accent2 else Muted, fontSize = 15.sp)
+                        }
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Field(newName, { newName = it.take(40) }, "Nueva colección", modifier = Modifier.weight(1f))
+                PillButton("Crear", Modifier.focusRequester(if (CollectionsStore.list.isEmpty()) createFocus else FocusRequester.Default), light = true) {
+                    val n = newName.trim(); if (n.isNotEmpty()) {
+                        val col = CollectionsStore.create(ctx, n)
+                        CollectionsStore.toggle(ctx, col.id, item.id)
+                        newName = ""
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { PillButton("Cerrar") { onDismiss() } }
+        }
     }
 }

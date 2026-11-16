@@ -255,6 +255,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
     var resolvedUrl by remember { mutableStateOf("") }
     // Audio/subtitles: chosen by hand (then no automatic selection for this title any more)
     var manualTracks by remember { mutableStateOf(false) }
+    var autoSubTried by remember(cur.url, cur.season, cur.episode) { mutableStateOf(false) }
     // Sources that already failed for this title; rebuffering pauses (stutter); last seek
     val triedUrls = remember { HashSet<String>() }
     var stalls by remember { mutableStateOf(emptyList<Long>()) }
@@ -536,6 +537,23 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
         player.trackSelectionParameters = p.build()
     }
 
+    fun tryAutoSubtitle() {
+        if (autoSubTried || cur.live || cur.archive != null) return
+        if (AppSettings.subMode == TrackLogic.SUB_OFF) return
+        val hasText = player.currentTracks.groups.any { it.type == C.TRACK_TYPE_TEXT }
+        if (hasText) { autoSubTried = true; return }
+        val lang = (TrackLogic.norm(AppSettings.subLangEffective()) ?: "en")
+        autoSubTried = true
+        scope.launch {
+            val q = SubQuery(cur.title, cur.tmdbId, cur.season, cur.episode, lang)
+            val res = runCatching { Subtitles.search(ctx, q) }.getOrDefault(emptyList())
+            val best = res.firstOrNull() ?: return@launch
+            runCatching { Subtitles.download(ctx, best, q) }.onSuccess { f ->
+                applyExternalSubtitle(f, best.lang.ifBlank { lang }, best.release.ifBlank { best.provider })
+            }
+        }
+    }
+
     fun applyExternalSubtitle(file: java.io.File, lang: String, label: String) {
         if (cur.live || cur.archive != null) return
         val at = player.currentPosition.takeIf { it > 0 } ?: cur.startMs
@@ -806,6 +824,7 @@ fun PlayerScreen(req: PlayReq, zapList: List<Item>, liveAll: List<Item>, seriesI
                 tracksVer++
                 ensureAudio()
                 autoSubs()
+                if (player.playbackState >= Player.STATE_READY) tryAutoSubtitle()
                 val vf = player.videoFormat
                 if (vf != null) showInfo(vf.width, vf.height)
             }

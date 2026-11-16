@@ -187,7 +187,7 @@ private val SE_RE = Regex("""S(\d+)E(\d+)""")
 private fun AppContent() {
     val ctx = LocalContext.current
     remember {
-        AppSettings.init(ctx); WatchStore.init(ctx); History.init(ctx); Library.init(ctx); QualityStore.init(ctx)
+        AppSettings.init(ctx); WatchStore.init(ctx); History.init(ctx); Library.init(ctx); CollectionsStore.init(ctx); QualityStore.init(ctx)
         PlaybackPrefs.init(ctx); DeadLinks.init(ctx); ChannelLists.init(ctx); Reminders.init(ctx); Reminders.schedule(ctx); 0
     }
     // Interrupted in the middle of adding last time (crash, power loss): the add screen automatically continues loading

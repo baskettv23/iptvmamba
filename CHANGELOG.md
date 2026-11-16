@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.10
+**Subtítulos**
+- Búsqueda/descarga automática del mejor subtítulo online al reproducir si no hay pistas embebidas (según idioma/modo configurado)
+- Diálogo de búsqueda de subtítulos en el reproductor (OpenSubtitles/SubDL/SubtitleCat) para elegir y aplicar
+
+**Colecciones**
+- Colecciones de películas/series creadas por el usuario (crear y añadir/quitar desde el detalle)
+- Visualización de colecciones en "Mi Lista"
+
 ## 1.1
 **Updates and your data**
 - In-app updates from GitHub Releases: the app checks once a day and shows "Update available" in the bell; one click downloads and installs
