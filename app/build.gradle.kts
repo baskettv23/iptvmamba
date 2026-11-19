@@ -32,14 +32,14 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.iptvmamba.player"
+        applicationId = "com.dannyiptv.player"
         minSdk = 24
         targetSdk = 37
         // Raise both for every release; the GitHub release tag must match versionName (e.g. tag "v1.1").
         versionCode = 14
         versionName = "1.12"
         // Name unter dem Symbol; der Debug-Build überschreibt ihn (siehe buildTypes)
-        manifestPlaceholders["appLabel"] = "iptvmamba"
+        manifestPlaceholders["appLabel"] = "Dannyiptv"
 
         buildConfigField("String", "TMDB_KEY", "\"${secret("TMDB_KEY")}\"")
         buildConfigField("String", "OMDB_KEY", "\"${secret("OMDB_KEY")}\"")
@@ -66,8 +66,7 @@ android {
         // Test-Build (Run in Android Studio / Debug-APK): eigene App-ID, damit die private iptvmamba-App auf dem Fernseher
         // nicht überschrieben wird. Beide Apps lassen sich parallel installieren (eigene Daten, eigener Name).
         debug {
-            applicationIdSuffix = ".test"
-            manifestPlaceholders["appLabel"] = "iptvmamba"
+            manifestPlaceholders["appLabel"] = "Dannyiptv"
         }
         release {
             if (hasKeystore) signingConfig = signingConfigs.getByName("release")
